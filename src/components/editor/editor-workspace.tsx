@@ -16,8 +16,21 @@ const FabricCanvas = dynamic(() => import('./canvas').then(mod => mod.FabricCanv
 });
 
 export function EditorWorkspace() {
-  const { canvas, zoom, zoomIn, zoomOut } = useEditor();
+  const { canvas, zoom, zoomIn, zoomOut, fitToScreen } = useEditor();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (canvas) {
+      fitToScreen();
+      
+      const handleResize = () => fitToScreen();
+      window.addEventListener('resize', handleResize);
+      
+      return () => {
+        window.removeEventListener('resize', handleResize);
+      };
+    }
+  }, [canvas, fitToScreen]);
   
   return (
     <div className="flex flex-col h-full bg-muted/50 p-4 gap-4 overflow-hidden">

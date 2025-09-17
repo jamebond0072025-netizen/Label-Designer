@@ -495,10 +495,11 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const setCanvasSize = useCallback((width: number, height: number) => {
     if (canvas) {
       canvas.setDimensions({ width, height });
+      fitToScreen();
       canvas.renderAll();
       updateCanvasObjects(canvas);
     }
-  }, [canvas, updateCanvasObjects]);
+  }, [canvas, updateCanvasObjects, fitToScreen]);
   
   const setCanvasBackgroundColor = useCallback((color: string) => {
     if (canvas) {
