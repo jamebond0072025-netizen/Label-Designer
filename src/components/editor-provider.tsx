@@ -52,8 +52,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     canvasInstance.on('selection:updated', updateSelection);
     canvasInstance.on('selection:cleared', updateSelection);
     canvasInstance.on('object:modified', (e) => {
-        // This ensures we have a fresh reference to the active object
-        // after modifications, which helps React state updates.
         setActiveObject(e.target || null);
     });
 
@@ -69,7 +67,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       return;
     };
     let obj;
-    // Default key is the type followed by a number, e.g., "text-1", "image-2"
     const existingKeys = canvas.getObjects().map(o => o.name);
     let i = 1;
     while(existingKeys.includes(`${type}-${i}`)) {
@@ -142,19 +139,21 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     if (!canvas) return;
     const obj = canvas.getObjects().find((o) => o.name === id);
     if (obj) {
-      // Handle special case for barcode regeneration
       if (obj.get('objectType') === 'barcode' && properties.barcodeValue) {
         const barcodeCanvas = document.createElement('canvas');
          try {
             JsBarcode(barcodeCanvas, properties.barcodeValue, {
-              format: 'CODE128', // Default or from object properties
+              format: 'CODE128',
               displayValue: true,
               fontSize: 20
             });
             const dataUrl = barcodeCanvas.toDataURL('image/png');
             (obj as FabricType.Image).setSrc(dataUrl, () => {
-                obj.set(properties); // set other props too
+                obj.set(properties);
                 canvas.renderAll();
+                // Force a re-render of the properties panel
+                setActiveObject(null);
+                setActiveObject(obj);
             }, { crossOrigin: 'anonymous' });
          } catch(e) {
             console.error(e);
@@ -163,17 +162,17 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       } else {
         obj.set(properties);
 
-        // Fabric's `set` doesn't handle scaling for width/height directly, so we need to do it manually.
-        if (properties.width !== undefined && obj.width) {
+        if (properties.width !== undefined) {
             obj.scaleToWidth(properties.width);
         }
-        if (properties.height !== undefined && obj.height) {
+        if (properties.height !== undefined) {
             obj.scaleToHeight(properties.height);
         }
         
         canvas.renderAll();
-        // Create a new object reference to trigger React's state update.
-        setActiveObject({ ...obj });
+        // Force a re-render of the properties panel by creating a new object reference.
+        setActiveObject(null);
+        setActiveObject(obj);
       }
     }
   }, [canvas, toast]);
@@ -221,7 +220,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         const json = event.target?.result as string;
         canvas.loadFromJSON(json, () => {
           canvas.renderAll();
-          // Re-render barcode objects if any, as they might not load correctly from JSON
           canvas.getObjects().forEach(obj => {
             if (obj.get('objectType') === 'barcode') {
               updateObject(obj.name!, { barcodeValue: obj.get('barcodeValue') });
@@ -281,7 +279,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
                     if (obj.get('objectType') === 'barcode') {
                         properties.barcodeValue = value;
                     } else {
-                        // This assumes the value is an image URL
                         (obj as FabricType.Image).setSrc(value, () => canvas.renderAll(), { crossOrigin: 'anonymous' });
                     }
                     break;
