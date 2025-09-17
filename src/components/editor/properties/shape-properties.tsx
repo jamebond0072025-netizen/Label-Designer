@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Label } from '@/components/ui/label';
@@ -12,8 +13,8 @@ interface ShapePropertiesProps {
 export function ShapeProperties({ object, updateObject }: ShapePropertiesProps) {
   
   const handlePropertyChange = (prop: string, value: any) => {
-    if (object.name) {
-      updateObject(object.name, { [prop]: value });
+    if (object.id) {
+      updateObject(object.id, { [prop]: value });
     }
   };
 

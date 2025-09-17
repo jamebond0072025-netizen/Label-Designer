@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -50,26 +51,26 @@ export function LeftSidebar() {
                       const isLocked = !!layer.lockMovementX; // Check one lock property as a proxy
                       return (
                          <li 
-                            key={layer.name} 
-                            onClick={() => setActiveObjectById(layer.name!)}
+                            key={layer.id} 
+                            onClick={() => setActiveObjectById(layer.id!)}
                             className={cn(
                                 "flex items-center justify-between p-2 rounded-md hover:bg-accent/50 text-sm cursor-pointer",
-                                activeObject?.name === layer.name && "bg-accent"
+                                activeObject?.id === layer.id && "bg-accent"
                             )}
                          >
                             <span className="truncate">{layer.name || `Untitled ${layer.type}`}</span>
                             <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); toggleVisibility(layer.name!); }}>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); toggleVisibility(layer.id!); }}>
                                 {layer.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); toggleLock(layer.name!); }}>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); toggleLock(layer.id!); }}>
                                 {isLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
                             </Button>
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-6 w-6"
-                                onClick={(e) => { e.stopPropagation(); bringForward(layer.name!); }}
+                                onClick={(e) => { e.stopPropagation(); bringForward(layer.id!); }}
                                 disabled={index === 0}
                             >
                                 <ChevronUp className="h-4 w-4" />
@@ -78,7 +79,7 @@ export function LeftSidebar() {
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-6 w-6"
-                                onClick={(e) => { e.stopPropagation(); sendBackwards(layer.name!); }}
+                                onClick={(e) => { e.stopPropagation(); sendBackwards(layer.id!); }}
                                 disabled={index === reversedLayers.length - 1}
                             >
                                 <ChevronDown className="h-4 w-4" />

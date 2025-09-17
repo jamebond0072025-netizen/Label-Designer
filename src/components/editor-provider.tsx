@@ -30,9 +30,9 @@ interface EditorContextType {
   toggleLock: (id: string) => void;
   setActiveObjectById: (id: string) => void;
   zoom: number;
+  setZoom: React.Dispatch<React.SetStateAction<number>>;
   zoomIn: () => void;
   zoomOut: () => void;
-  resetZoom: () => void;
   setCanvasSize: (width: number, height: number) => void;
   setCanvasBackgroundColor: (color: string) => void;
   setCanvasBackgroundImage: (url: string) => void;
@@ -58,7 +58,14 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const updateCanvasObjects = useCallback((canvasInstance: FabricType.Canvas) => {
-    setCanvasObjects([...canvasInstance.getObjects()]);
+    const objects = canvasInstance.getObjects().map(obj => {
+        // Assign a unique ID if it doesn't have one
+        if (!obj.id) {
+            obj.id = uuidv4();
+        }
+        return obj;
+    });
+    setCanvasObjects([...objects]);
   }, []);
 
   const initCanvas = useCallback((canvasInstance: FabricType.Canvas) => {
@@ -113,7 +120,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     }
     const defaultKey = `${type}-${i}`;
 
-    const commonProps = { name: defaultKey };
+    const commonProps = { name: defaultKey, id: uuidv4() };
 
     switch (type) {
       case 'rect':
@@ -176,10 +183,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
  const updateObject = useCallback((id: string, properties: any) => {
     if (!canvas) return;
-    const obj = canvas.getObjects().find((o) => o.name === id);
+    const obj = canvas.getObjects().find((o) => o.id === id);
     if (obj) {
         if (obj.name !== properties.name && properties.name) {
-            const isNameTaken = canvas.getObjects().some(o => o.name === properties.name);
+            const isNameTaken = canvas.getObjects().some(o => o.name === properties.name && o.id !== id);
             if(isNameTaken) {
                 toast({ title: "Key already exists", description: "Please use a unique key for each element.", variant: "destructive" });
                 // Revert the name in the UI
@@ -236,7 +243,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   const handleSave = useCallback((templateName: string) => {
     if (!canvas) return;
-    const json = JSON.stringify(canvas.toJSON(['name', 'objectType', 'barcodeValue']));
+    const json = JSON.stringify(canvas.toJSON(['id', 'name', 'objectType', 'barcodeValue']));
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -270,7 +277,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
           updateCanvasObjects(canvas);
           canvas.getObjects().forEach(obj => {
             if (obj.get('objectType') === 'barcode') {
-              updateObject(obj.name!, { barcodeValue: obj.get('barcodeValue') });
+              updateObject(obj.id!, { barcodeValue: obj.get('barcodeValue') });
             }
           });
           toast({ title: "Template Loaded!" });
@@ -336,7 +343,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
           }
 
           if (Object.keys(properties).length > 0) {
-            updateObject(key, properties);
+            updateObject(obj.id!, properties);
           }
         }
       });
@@ -353,7 +360,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   const bringForward = useCallback((id: string) => {
     if (!canvas) return;
-    const obj = canvas.getObjects().find((o) => o.name === id);
+    const obj = canvas.getObjects().find((o) => o.id === id);
     if (obj) {
       canvas.bringForward(obj);
       canvas.renderAll();
@@ -363,7 +370,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   const sendBackwards = useCallback((id: string) => {
     if (!canvas) return;
-    const obj = canvas.getObjects().find((o) => o.name === id);
+    const obj = canvas.getObjects().find((o) => o.id === id);
     if (obj) {
       canvas.sendBackwards(obj);
       canvas.renderAll();
@@ -373,7 +380,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   const toggleVisibility = useCallback((id: string) => {
     if (!canvas) return;
-    const obj = canvas.getObjects().find((o) => o.name === id);
+    const obj = canvas.getObjects().find((o) => o.id === id);
     if (obj) {
       obj.set({ visible: !obj.visible });
       canvas.renderAll();
@@ -383,7 +390,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   const toggleLock = useCallback((id: string) => {
     if (!canvas) return;
-    const obj = canvas.getObjects().find((o) => o.name === id);
+    const obj = canvas.getObjects().find((o) => o.id === id);
     if (obj) {
       obj.set({
         lockMovementX: !obj.lockMovementX,
@@ -399,25 +406,36 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   const setActiveObjectById = useCallback((id: string) => {
     if (!canvas) return;
-    const obj = canvas.getObjects().find((o) => o.name === id);
+    const obj = canvas.getObjects().find((o) => o.id === id);
     if (obj) {
       canvas.setActiveObject(obj);
       canvas.renderAll();
     }
   }, [canvas]);
 
-  const zoomIn = () => setZoom(prev => Math.min(prev + 0.1, 3));
-  const zoomOut = () => setZoom(prev => Math.max(prev - 0.1, 0.1));
-  const resetZoom = () => setZoom(1);
+  const zoomIn = () => {
+    if (!canvas) return;
+    const newZoom = Math.min(zoom * 1.1, 5);
+    setZoom(newZoom);
+    canvas.setZoom(newZoom);
+    canvas.renderAll();
+  };
+  
+  const zoomOut = () => {
+    if (!canvas) return;
+    const newZoom = Math.max(zoom * 0.9, 0.1);
+    setZoom(newZoom);
+    canvas.setZoom(newZoom);
+    canvas.renderAll();
+  };
 
   const setCanvasSize = useCallback((width: number, height: number) => {
     if (canvas) {
       canvas.setDimensions({ width, height });
       canvas.renderAll();
-      // Force a re-render of components that depend on canvas size
-      setCanvas(Object.create(canvas)); 
+      updateCanvasObjects(canvas);
     }
-  }, [canvas]);
+  }, [canvas, updateCanvasObjects]);
   
   const setCanvasBackgroundColor = useCallback((color: string) => {
     if (canvas) {
@@ -466,9 +484,9 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     toggleLock,
     setActiveObjectById,
     zoom,
+    setZoom,
     zoomIn,
     zoomOut,
-    resetZoom,
     setCanvasSize,
     setCanvasBackgroundColor,
     setCanvasBackgroundImage,

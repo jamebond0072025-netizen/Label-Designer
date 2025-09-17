@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Input } from '@/components/ui/input';
@@ -13,18 +14,18 @@ interface GeneralPropertiesProps {
 export function GeneralProperties({ object, updateObject }: GeneralPropertiesProps) {
     const handleInputChange = (prop: string, value: string) => {
         const numValue = parseFloat(value);
-        if (object.name) {
+        if (object.id) {
             if (prop === 'name' || isNaN(numValue)) {
-                updateObject(object.name, { [prop]: value });
+                updateObject(object.id, { [prop]: value });
             } else {
-                updateObject(object.name, { [prop]: numValue });
+                updateObject(object.id, { [prop]: numValue });
             }
         }
     };
     
     const handleSliderChange = (value: number[]) => {
-        if (object.name) {
-            updateObject(object.name, { angle: value[0] });
+        if (object.id) {
+            updateObject(object.id, { angle: value[0] });
         }
     };
 

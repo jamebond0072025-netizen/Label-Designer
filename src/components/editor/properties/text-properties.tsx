@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Label } from '@/components/ui/label';
@@ -16,8 +17,8 @@ interface TextPropertiesProps {
 export function TextProperties({ object, updateObject }: TextPropertiesProps) {
   
   const handlePropertyChange = (prop: string, value: any) => {
-    if (object.name) {
-      updateObject(object.name, { [prop]: value });
+    if (object.id) {
+      updateObject(object.id, { [prop]: value });
     }
   };
 

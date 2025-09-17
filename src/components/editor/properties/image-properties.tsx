@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Label } from '@/components/ui/label';
@@ -13,7 +14,7 @@ interface ImagePropertiesProps {
 export function ImageProperties({ object, updateObject }: ImagePropertiesProps) {
   
   const handleUrlChange = (newUrl: string) => {
-    if (object.name) {
+    if (object.id) {
         // Fabric's setSrc updates the image source
         object.setSrc(newUrl, () => {
             if(object.canvas) {
