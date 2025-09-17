@@ -14,7 +14,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "../ui/button";
-import { Eye, Lock, ChevronUp, ChevronDown, Unlock, PanelLeft, EyeOff } from "lucide-react";
+import { Eye, Lock, ChevronUp, ChevronDown, Unlock, PanelLeft, EyeOff, BringToFront, SendToBack } from "lucide-react";
 import { useEditor } from "../editor-provider";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
@@ -28,11 +28,25 @@ export function LeftSidebar() {
     bringForward,
     sendBackwards,
     toggleVisibility,
-    toggleLock
+    toggleLock,
   } = useEditor();
 
   // Reverse the array for top-to-bottom layer display
   const reversedLayers = [...canvasObjects].reverse();
+  
+  const handleBringForward = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setActiveObjectById(id);
+    // Timeout to ensure active object is set before action
+    setTimeout(() => bringForward(), 0);
+  }
+
+  const handleSendBackwards = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setActiveObjectById(id);
+    // Timeout to ensure active object is set before action
+    setTimeout(() => sendBackwards(), 0);
+  }
 
   return (
     <Sidebar>
@@ -93,10 +107,10 @@ export function LeftSidebar() {
                                         variant="ghost" 
                                         size="icon" 
                                         className="h-6 w-6"
-                                        onClick={(e) => { e.stopPropagation(); bringForward(layer.id!); }}
+                                        onClick={(e) => handleBringForward(e, layer.id!)}
                                         disabled={index === 0}
                                     >
-                                        <ChevronUp className="h-4 w-4" />
+                                        <BringToFront className="h-4 w-4" />
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent side="top"><p>Bring Forward</p></TooltipContent>
@@ -107,10 +121,10 @@ export function LeftSidebar() {
                                         variant="ghost" 
                                         size="icon" 
                                         className="h-6 w-6"
-                                        onClick={(e) => { e.stopPropagation(); sendBackwards(layer.id!); }}
+                                        onClick={(e) => handleSendBackwards(e, layer.id!)}
                                         disabled={index === reversedLayers.length - 1}
                                     >
-                                        <ChevronDown className="h-4 w-4" />
+                                        <SendToBack className="h-4 w-4" />
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent side="top"><p>Send Backward</p></TooltipContent>

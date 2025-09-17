@@ -42,28 +42,43 @@ import { useEditor } from "../editor-provider";
 export function Toolbar() {
   const { 
     addObject, 
+    canUndo,
+    undo,
+    canRedo,
+    redo,
     zoomIn,
     zoomOut,
     fitToScreen,
+    alignLeft,
+    alignCenterHorizontal,
+    alignRight,
+    alignTop,
+    alignCenterVertical,
+    alignBottom,
+    bringToFront,
+    sendToBack,
+    activeObject,
   } = useEditor();
+  
+  const isObjectSelected = !!activeObject;
 
   return (
     <TooltipProvider>
       <div className="bg-background rounded-lg border shadow-sm p-2 flex items-center gap-2 flex-wrap sticky top-0 z-10">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon"><Undo /></Button>
+            <Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo}><Undo /></Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Undo</p>
+            <p>Undo (Ctrl+Z)</p>
           </TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon"><Redo /></Button>
+            <Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo}><Redo /></Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Redo</p>
+            <p>Redo (Ctrl+Y)</p>
           </TooltipContent>
         </Tooltip>
         
@@ -124,7 +139,7 @@ export function Toolbar() {
         <div className="flex items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon"><AlignLeft /></Button>
+              <Button variant="ghost" size="icon" onClick={alignLeft} disabled={!isObjectSelected}><AlignLeft /></Button>
             </TooltipTrigger>
             <TooltipContent>
               <p>Align Left</p>
@@ -132,7 +147,7 @@ export function Toolbar() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon"><AlignCenterHorizontal /></Button>
+              <Button variant="ghost" size="icon" onClick={alignCenterHorizontal} disabled={!isObjectSelected}><AlignCenterHorizontal /></Button>
             </TooltipTrigger>
             <TooltipContent>
               <p>Align Center Horizontally</p>
@@ -140,7 +155,7 @@ export function Toolbar() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon"><AlignRight /></Button>
+              <Button variant="ghost" size="icon" onClick={alignRight} disabled={!isObjectSelected}><AlignRight /></Button>
             </TooltipTrigger>
             <TooltipContent>
               <p>Align Right</p>
@@ -148,7 +163,7 @@ export function Toolbar() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon"><AlignStartVertical /></Button>
+              <Button variant="ghost" size="icon" onClick={alignTop} disabled={!isObjectSelected}><AlignStartVertical /></Button>
             </TooltipTrigger>
             <TooltipContent>
               <p>Align Top</p>
@@ -156,7 +171,7 @@ export function Toolbar() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon"><AlignVerticalJustifyCenter /></Button>
+              <Button variant="ghost" size="icon" onClick={alignCenterVertical} disabled={!isObjectSelected}><AlignVerticalJustifyCenter /></Button>
             </TooltipTrigger>
             <TooltipContent>
               <p>Align Center Vertically</p>
@@ -164,7 +179,7 @@ export function Toolbar() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon"><AlignEndVertical /></Button>
+              <Button variant="ghost" size="icon" onClick={alignBottom} disabled={!isObjectSelected}><AlignEndVertical /></Button>
             </TooltipTrigger>
             <TooltipContent>
               <p>Align Bottom</p>
@@ -172,7 +187,7 @@ export function Toolbar() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon"><BringToFront /></Button>
+              <Button variant="ghost" size="icon" onClick={bringToFront} disabled={!isObjectSelected}><BringToFront /></Button>
             </TooltipTrigger>
             <TooltipContent>
               <p>Bring to Front</p>
@@ -180,7 +195,7 @@ export function Toolbar() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon"><SendToBack /></Button>
+              <Button variant="ghost" size="icon" onClick={sendToBack} disabled={!isObjectSelected}><SendToBack /></Button>
             </TooltipTrigger>
             <TooltipContent>
               <p>Send to Back</p>
