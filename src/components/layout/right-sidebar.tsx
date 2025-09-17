@@ -4,7 +4,7 @@ import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
-  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   Accordion,
@@ -18,17 +18,20 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 import { Textarea } from "../ui/textarea";
-import { Sparkles, LoaderCircle } from "lucide-react";
+import { Sparkles, LoaderCircle, ChevronUp } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { useEditor } from "../editor-provider";
 
 export function RightSidebar() {
   const { activeObject } = useEditor();
+  const { toggleSidebar } = useSidebar();
 
   return (
-    <Sidebar side="right" collapsible="icon">
+    <Sidebar side="right">
       <SidebarHeader>
-        <SidebarTrigger />
+        <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+           <ChevronUp className="h-4 w-4 transform rotate-90" />
+        </Button>
       </SidebarHeader>
       <SidebarContent className="p-0">
         <Accordion type="multiple" defaultValue={["properties"]} className="w-full">

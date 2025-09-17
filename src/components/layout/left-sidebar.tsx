@@ -5,6 +5,7 @@ import {
   SidebarContent,
   SidebarHeader,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   Accordion,
@@ -17,6 +18,8 @@ import { Eye, Lock, ChevronUp, ChevronDown, Unlock } from "lucide-react";
 import { useEditor } from "../editor-provider";
 
 export function LeftSidebar() {
+  const { toggleSidebar } = useSidebar();
+  
   // Placeholder data, will be replaced by editor context
   const layers = [
     { id: 1, type: "Text", name: "Product Name", visible: true, locked: false },
@@ -28,9 +31,11 @@ export function LeftSidebar() {
   const templates = ["Shipping Label", "QR Badge", "Product Sticker"];
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <SidebarTrigger />
+    <Sidebar>
+       <SidebarHeader>
+        <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+           <ChevronUp className="h-4 w-4 transform -rotate-90" />
+        </Button>
       </SidebarHeader>
       <SidebarContent>
         <Accordion type="multiple" defaultValue={["layers", "templates"]} className="w-full">

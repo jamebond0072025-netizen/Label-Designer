@@ -9,11 +9,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useSidebar } from "@/components/ui/sidebar";
-import { FileDown, PanelLeftClose } from "lucide-react";
+import { FileDown } from "lucide-react";
 
 export function Navbar() {
-  const { toggleSidebar } = useSidebar();
   const {
     saveAsJson,
     loadFromJson,
@@ -23,11 +21,8 @@ export function Navbar() {
   } = useEditor();
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 py-2">
+    <header className="sticky w-full top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-          <PanelLeftClose className="h-6 w-6 text-primary" />
-        </Button>
         <h1 className="text-xl font-bold">LabelForge</h1>
       </div>
       <div className="ml-auto flex items-center gap-2">
