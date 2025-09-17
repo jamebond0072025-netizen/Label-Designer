@@ -1,12 +1,12 @@
 'use client';
 
 import { useRef, useEffect, useCallback } from 'react';
-import { fabric } from 'fabric';
 import { useEditor } from '../editor-provider';
+import { Skeleton } from '../ui/skeleton';
 
 export function FabricCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { initCanvas, canvas } = useEditor();
+  const { initCanvas, canvas, fabric } = useEditor();
 
   const handleResize = useCallback(() => {
     if (canvas && canvasRef.current) {
@@ -23,7 +23,7 @@ export function FabricCanvas() {
 
 
   useEffect(() => {
-    if (canvasRef.current) {
+    if (canvasRef.current && fabric) {
         const fabricCanvas = new fabric.Canvas(canvasRef.current, {
             width: canvasRef.current.parentElement?.clientWidth || 800,
             height: canvasRef.current.parentElement?.clientHeight || 600,
@@ -53,7 +53,7 @@ export function FabricCanvas() {
             fabricCanvas.dispose();
         };
     }
-  }, [initCanvas]);
+  }, [initCanvas, fabric]);
 
   useEffect(() => {
     window.addEventListener('resize', handleResize);
@@ -62,6 +62,10 @@ export function FabricCanvas() {
       window.removeEventListener('resize', handleResize);
     };
   }, [handleResize]);
+
+  if (!fabric) {
+    return <Skeleton className="w-full h-full" />;
+  }
 
   return <canvas ref={canvasRef} />;
 }

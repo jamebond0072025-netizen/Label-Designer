@@ -1,25 +1,35 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { fabric } from 'fabric';
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import type { fabric as FabricType } from 'fabric';
 import { v4 as uuidv4 } from 'uuid';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface EditorContextType {
-  canvas: fabric.Canvas | null;
-  activeObject: fabric.Object | null;
-  initCanvas: (canvas: fabric.Canvas) => void;
+  canvas: FabricType.Canvas | null;
+  activeObject: FabricType.Object | null;
+  initCanvas: (canvas: FabricType.Canvas) => void;
   addObject: (type: 'rect' | 'circle' | 'textbox' | 'image' | 'barcode') => void;
   updateObject: (id: string, properties: any) => void;
+  fabric: typeof FabricType | null;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
 export const EditorProvider = ({ children }: { children: ReactNode }) => {
-  const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
-  const [activeObject, setActiveObject] = useState<fabric.Object | null>(null);
+  const [canvas, setCanvas] = useState<FabricType.Canvas | null>(null);
+  const [activeObject, setActiveObject] = useState<FabricType.Object | null>(null);
+  const [fabric, setFabric] = useState<typeof FabricType | null>(null);
+  const { toast } = useToast();
 
-  const initCanvas = useCallback((canvasInstance: fabric.Canvas) => {
+  useEffect(() => {
+    import('fabric').then((fabricModule) => {
+      setFabric(fabricModule.fabric);
+    });
+  }, []);
+
+  const initCanvas = useCallback((canvasInstance: FabricType.Canvas) => {
     setCanvas(canvasInstance);
 
     canvasInstance.on('selection:created', (e) => {
@@ -41,7 +51,14 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const addObject = useCallback((type: 'rect' | 'circle' | 'textbox' | 'image' | 'barcode') => {
-    if (!canvas) return;
+    if (!canvas || !fabric) {
+      toast({
+        title: "Editor not ready",
+        description: "The canvas or fabric library is not initialized yet.",
+        variant: "destructive"
+      });
+      return;
+    };
     let obj;
     const commonProps = { name: uuidv4() };
 
@@ -55,6 +72,13 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       case 'textbox':
         obj = new fabric.Textbox('New Text', { ...commonProps, left: 50, top: 50, width: 150, fontSize: 20 });
         break;
+      case 'image':
+      case 'barcode':
+        toast({
+            title: "Coming Soon!",
+            description: `Adding ${type} objects is not yet implemented.`,
+        });
+        return;
     }
 
     if (obj) {
@@ -62,7 +86,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       canvas.setActiveObject(obj);
       canvas.renderAll();
     }
-  }, [canvas]);
+  }, [canvas, fabric, toast]);
 
   const updateObject = useCallback((id: string, properties: any) => {
     if (!canvas || !activeObject) return;
@@ -92,7 +116,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     activeObject,
     initCanvas,
     addObject,
-    updateObject
+    updateObject,
+    fabric,
   };
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;

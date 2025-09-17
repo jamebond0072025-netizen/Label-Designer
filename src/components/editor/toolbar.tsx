@@ -25,11 +25,9 @@ import {
   AlignLeft,
   AlignCenterHorizontal,
   AlignRight,
-  AlignTop,
-  AlignVerticalSpaceAround,
-  AlignBottom,
-  ChevronsRight,
-  ChevronsLeft,
+  AlignStartVertical,
+  AlignVerticalJustifyCenter,
+  AlignEndVertical,
   BringToFront,
   SendToBack,
 } from "lucide-react";
@@ -97,9 +95,9 @@ export function Toolbar() {
         <Button variant="ghost" size="icon"><AlignLeft /></Button>
         <Button variant="ghost" size="icon"><AlignCenterHorizontal /></Button>
         <Button variant="ghost" size="icon"><AlignRight /></Button>
-        <Button variant="ghost" size="icon"><AlignTop /></Button>
-        <Button variant="ghost" size="icon"><AlignVerticalSpaceAround /></Button>
-        <Button variant="ghost" size="icon"><AlignBottom /></Button>
+        <Button variant="ghost" size="icon"><AlignStartVertical /></Button>
+        <Button variant="ghost" size="icon"><AlignVerticalJustifyCenter /></Button>
+        <Button variant="ghost" size="icon"><AlignEndVertical /></Button>
         <Button variant="ghost" size="icon"><BringToFront /></Button>
         <Button variant="ghost" size="icon"><SendToBack /></Button>
       </div>
