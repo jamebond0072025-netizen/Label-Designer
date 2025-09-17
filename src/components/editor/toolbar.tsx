@@ -7,7 +7,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -22,7 +21,6 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize,
-  FileDown,
   AlignLeft,
   AlignCenterHorizontal,
   AlignRight,
@@ -38,11 +36,6 @@ import { useEditor } from "../editor-provider";
 export function Toolbar() {
   const { 
     addObject, 
-    saveAsJson, 
-    loadFromJson,
-    exportAsPng,
-    exportAsJpg,
-    exportAsPdf,
     zoomIn,
     zoomOut,
     fitToScreen,
@@ -83,22 +76,6 @@ export function Toolbar() {
        <Button variant="ghost" size="icon" onClick={zoomIn}><ZoomIn /></Button>
       <Button variant="ghost" size="icon" onClick={zoomOut}><ZoomOut /></Button>
       <Button variant="ghost" size="icon" onClick={fitToScreen}><Maximize /></Button>
-
-      <Separator orientation="vertical" className="h-6" />
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost"><FileDown className="mr-2" /> File</Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem onClick={saveAsJson}>Save Template</DropdownMenuItem>
-          <DropdownMenuItem onClick={loadFromJson}>Load Template</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={exportAsPng}>Export as PNG</DropdownMenuItem>
-          <DropdownMenuItem onClick={exportAsJpg}>Export as JPG</DropdownMenuItem>
-          <DropdownMenuItem onClick={exportAsPdf}>Export as PDF</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
 
       <Separator orientation="vertical" className="h-6" />
 

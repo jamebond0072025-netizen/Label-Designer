@@ -108,23 +108,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     canvasInstance.on('object:added', onObjectAddedOrRemoved);
     canvasInstance.on('object:removed', onObjectAddedOrRemoved);
     
-    const rect = new fabric.Rect({
-        left: 100,
-        top: 100,
-        fill: 'red',
-        width: 200,
-        height: 100,
-    });
-    canvasInstance.add(rect);
-
-    const text = new fabric.Textbox('Hello world', {
-        left: 350,
-        top: 150,
-        width: 150,
-        fontSize: 20
-    });
-    canvasInstance.add(text);
-
     return () => {
         canvasInstance.off('selection:created', updateSelection);
         canvasInstance.off('selection:updated', updateSelection);
@@ -330,8 +313,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const currentVpt = canvas.viewportTransform;
 
     // Reset zoom and viewport for export
-    canvas.setZoom(1);
-    canvas.viewportTransform = [1, 0, 0, 1, 0, 0];
+    fitToScreen();
     canvas.renderAll();
 
     const dataUrl = canvas.toDataURL({
@@ -594,5 +576,3 @@ export const useEditor = () => {
   }
   return context;
 };
-
-    
