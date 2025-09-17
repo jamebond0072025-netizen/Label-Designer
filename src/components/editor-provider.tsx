@@ -5,6 +5,8 @@ import type { fabric as FabricType } from 'fabric';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
+import JsBarcode from 'jsbarcode';
+import { SaveTemplateDialog } from './save-template-dialog';
 
 interface EditorContextType {
   canvas: FabricType.Canvas | null;
@@ -12,6 +14,7 @@ interface EditorContextType {
   initCanvas: (canvas: FabricType.Canvas) => void;
   addObject: (type: 'rect' | 'circle' | 'textbox' | 'image' | 'barcode') => void;
   updateObject: (id: string, properties: any) => void;
+  deleteActiveObject: () => void;
   fabric: typeof FabricType | null;
   saveAsJson: () => void;
   loadFromJson: () => void;
@@ -26,10 +29,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const [canvas, setCanvas] = useState<FabricType.Canvas | null>(null);
   const [activeObject, setActiveObject] = useState<FabricType.Object | null>(null);
   const [fabric, setFabric] = useState<typeof FabricType | null>(null);
+  const [isSaveDialogOpen, setSaveDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Dynamically import fabric on the client side only
     if (typeof window !== 'undefined') {
       import('fabric').then((fabricModule) => {
         setFabric(fabricModule.fabric);
@@ -40,21 +43,14 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const initCanvas = useCallback((canvasInstance: FabricType.Canvas) => {
     setCanvas(canvasInstance);
 
-    canvasInstance.on('selection:created', (e) => {
-      setActiveObject(e.selected?.[0] || null);
-    });
-    canvasInstance.on('selection:updated', (e) => {
-      setActiveObject(e.selected?.[0] || null);
-    });
-    canvasInstance.on('selection:cleared', () => {
-      setActiveObject(null);
-    });
-    canvasInstance.on('object:modified', (e) => {
-        if (e.target) {
-            setActiveObject(null); // Force re-render of properties panel
-            setActiveObject(e.target);
-        }
-    });
+    const updateSelection = (e: FabricType.IEvent) => {
+      setActiveObject(canvasInstance.getActiveObject() || null);
+    };
+
+    canvasInstance.on('selection:created', updateSelection);
+    canvasInstance.on('selection:updated', updateSelection);
+    canvasInstance.on('selection:cleared', updateSelection);
+    canvasInstance.on('object:modified', updateSelection);
 
   }, []);
 
@@ -81,20 +77,44 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         obj = new fabric.Textbox('New Text', { ...commonProps, left: 50, top: 50, width: 150, fontSize: 20 });
         break;
       case 'image':
-        // Add a placeholder image
         fabric.Image.fromURL('https://picsum.photos/seed/product/400/300', (img) => {
             img.set({ ...commonProps, left: 50, top: 50 });
             img.scaleToWidth(200);
             canvas.add(img);
             canvas.setActiveObject(img);
             canvas.renderAll();
-        });
+        }, { crossOrigin: 'anonymous' });
         return;
       case 'barcode':
-        toast({
-            title: "Coming Soon!",
-            description: `Adding ${type} objects is not yet implemented.`,
-        });
+        const barcodeValue = '1234567890';
+        const barcodeCanvas = document.createElement('canvas');
+        try {
+            JsBarcode(barcodeCanvas, barcodeValue, {
+              format: 'CODE128',
+              displayValue: true,
+              fontSize: 20
+            });
+            const dataUrl = barcodeCanvas.toDataURL('image/png');
+            fabric.Image.fromURL(dataUrl, (img) => {
+                img.set({
+                    ...commonProps,
+                    left: 50,
+                    top: 50,
+                    objectType: 'barcode', // Custom property
+                    barcodeValue: barcodeValue
+                });
+                img.scaleToWidth(200);
+                canvas.add(img);
+                canvas.setActiveObject(img);
+                canvas.renderAll();
+            });
+        } catch (e) {
+            console.error(e);
+            toast({
+                title: "Failed to create barcode",
+                variant: "destructive"
+            });
+        }
         return;
     }
 
@@ -106,42 +126,70 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   }, [canvas, fabric, toast]);
 
   const updateObject = useCallback((id: string, properties: any) => {
-    if (!canvas || !activeObject) return;
-
-    // Find the object on the canvas by its unique ID (name)
+    if (!canvas) return;
     const obj = canvas.getObjects().find((o) => o.name === id);
     if (obj) {
-      obj.set(properties);
       
-      // Manually adjust width/height for scaling if that's what's being set
-      if (properties.width !== undefined && obj.width) {
-          obj.scaleX = properties.width / obj.width;
-      }
-      if (properties.height !== undefined && obj.height) {
-          obj.scaleY = properties.height / obj.height;
-      }
+      // Handle special case for barcode regeneration
+      if (obj.get('objectType') === 'barcode' && properties.barcodeValue) {
+        const barcodeCanvas = document.createElement('canvas');
+         try {
+            JsBarcode(barcodeCanvas, properties.barcodeValue, {
+              format: 'CODE128',
+              displayValue: true,
+              fontSize: 20
+            });
+            const dataUrl = barcodeCanvas.toDataURL('image/png');
+            (obj as FabricType.Image).setSrc(dataUrl, () => {
+                obj.set(properties); // set other props too
+                canvas.renderAll();
+            }, { crossOrigin: 'anonymous' });
+         } catch(e) {
+            console.error(e);
+         }
+      } else {
+        obj.set(properties);
 
-      canvas.renderAll();
-      // Force a re-render of the properties panel by resetting the active object state
-      setActiveObject(null);
-      setActiveObject(obj);
+        if (properties.width !== undefined && obj.width) {
+            obj.scaleX = properties.width / obj.width;
+        }
+        if (properties.height !== undefined && obj.height) {
+            obj.scaleY = properties.height / obj.height;
+        }
+        
+        canvas.renderAll();
+      }
     }
+  }, [canvas]);
+
+  const deleteActiveObject = useCallback(() => {
+    if (!canvas || !activeObject) return;
+    canvas.remove(activeObject);
+    canvas.discardActiveObject();
+    canvas.renderAll();
+    setActiveObject(null);
   }, [canvas, activeObject]);
 
-  const saveAsJson = useCallback(() => {
+
+  const handleSave = useCallback((templateName: string) => {
     if (!canvas) return;
-    const json = JSON.stringify(canvas.toJSON(['name']));
+    const json = JSON.stringify(canvas.toJSON(['name', 'objectType', 'barcodeValue']));
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'label-template.json';
+    a.download = `${templateName}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast({ title: "Template Saved!" });
+    toast({ title: "Template Saved!", description: `Saved as ${templateName}.json` });
+    setSaveDialogOpen(false);
   }, [canvas, toast]);
+
+  const saveAsJson = () => {
+    setSaveDialogOpen(true);
+  }
 
   const loadFromJson = useCallback(() => {
     if (!canvas) return;
@@ -156,20 +204,26 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         const json = event.target?.result as string;
         canvas.loadFromJSON(json, () => {
           canvas.renderAll();
+          // Re-render barcode objects if any, as they might not load correctly from JSON
+          canvas.getObjects().forEach(obj => {
+            if (obj.get('objectType') === 'barcode') {
+              updateObject(obj.name!, { barcodeValue: obj.get('barcodeValue') });
+            }
+          });
           toast({ title: "Template Loaded!" });
         });
       };
       reader.readAsText(file);
     };
     input.click();
-  }, [canvas, toast]);
+  }, [canvas, toast, updateObject]);
 
   const exportCanvas = (format: 'png' | 'jpeg' | 'pdf') => {
     if (!canvas) return;
     const dataUrl = canvas.toDataURL({
       format: format === 'pdf' ? 'png' : format,
       quality: 1,
-      multiplier: 2 // for better quality
+      multiplier: 2
     });
 
     if (format === 'pdf') {
@@ -201,6 +255,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     initCanvas,
     addObject,
     updateObject,
+    deleteActiveObject,
     fabric,
     saveAsJson,
     loadFromJson,
@@ -209,7 +264,16 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     exportAsPdf,
   };
 
-  return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
+  return (
+    <EditorContext.Provider value={value}>
+      {children}
+      <SaveTemplateDialog 
+        isOpen={isSaveDialogOpen}
+        onClose={() => setSaveDialogOpen(false)}
+        onSave={handleSave}
+      />
+    </EditorContext.Provider>
+  );
 };
 
 export const useEditor = () => {

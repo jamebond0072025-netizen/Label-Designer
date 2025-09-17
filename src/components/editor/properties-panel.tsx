@@ -7,9 +7,11 @@ import { Button } from '../ui/button';
 import { Trash2 } from 'lucide-react';
 import { Separator } from '../ui/separator';
 import { GeneralProperties } from './properties/general-properties';
+import { BarcodeProperties } from './properties/barcode-properties';
+import { ImageProperties } from './properties/image-properties';
 
 export function PropertiesPanel() {
-  const { activeObject, updateObject } = useEditor();
+  const { activeObject, updateObject, deleteActiveObject } = useEditor();
 
   if (!activeObject) {
     return (
@@ -23,11 +25,16 @@ export function PropertiesPanel() {
     const objectType = activeObject.type;
     switch (objectType) {
       case 'textbox':
-        return <TextProperties object={activeObject} updateObject={updateObject} />;
+        return <TextProperties object={activeObject as fabric.Textbox} updateObject={updateObject} />;
       case 'rect':
       case 'circle':
         return <ShapeProperties object={activeObject} updateObject={updateObject} />;
-      // Add cases for 'image', 'barcode', etc.
+      case 'image':
+         // Custom property `objectType` is used to identify barcodes
+        if (activeObject.get('objectType') === 'barcode') {
+          return <BarcodeProperties object={activeObject} updateObject={updateObject} />;
+        }
+        return <ImageProperties object={activeObject as fabric.Image} updateObject={updateObject} />;
       default:
         return (
           <div className="text-sm text-muted-foreground">
@@ -43,7 +50,7 @@ export function PropertiesPanel() {
       <Separator />
       {renderProperties()}
       <Separator />
-      <Button variant="destructive" className="w-full mt-4">
+      <Button variant="destructive" className="w-full mt-4" onClick={deleteActiveObject}>
         <Trash2 className="mr-2 h-4 w-4" />
         Delete Object
       </Button>

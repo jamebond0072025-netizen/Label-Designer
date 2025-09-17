@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Bold, Italic, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
-import { fabric } from 'fabric';
+import type { fabric } from 'fabric';
 
 interface TextPropertiesProps {
   object: fabric.Textbox;
