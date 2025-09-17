@@ -39,9 +39,11 @@ export function EditorWorkspace() {
 
     // Center the viewport
     const vpt = canvas.getViewportTransform();
-    vpt[4] = (container.clientWidth - canvasWidth * newZoom) / 2;
-    vpt[5] = (container.clientHeight - canvasHeight * newZoom) / 2;
-    canvas.setViewportTransform(vpt);
+    if (vpt) {
+        vpt[4] = (container.clientWidth - canvasWidth * newZoom) / 2;
+        vpt[5] = (container.clientHeight - canvasHeight * newZoom) / 2;
+        canvas.setViewportTransform(vpt);
+    }
 
     canvas.renderAll();
   }, [canvas, fabric, setZoom]);

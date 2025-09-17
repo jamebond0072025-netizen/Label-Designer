@@ -13,7 +13,7 @@ interface EditorContextType {
   canvas: FabricType.Canvas | null;
   activeObject: FabricType.Object | null;
   canvasObjects: FabricType.Object[];
-  initCanvas: (canvas: FabricType.Canvas) => void;
+  initCanvas: (el: HTMLCanvasElement) => void;
   addObject: (type: 'rect' | 'circle' | 'textbox' | 'image' | 'barcode') => void;
   updateObject: (id: string, properties: any) => void;
   deleteActiveObject: () => void;
@@ -68,7 +68,21 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     setCanvasObjects([...objects]);
   }, []);
 
-  const initCanvas = useCallback((canvasInstance: FabricType.Canvas) => {
+  const initCanvas = useCallback((el: HTMLCanvasElement) => {
+    if (!fabric) return;
+    
+    // Dispose existing canvas if it exists
+    if(canvas) {
+        canvas.dispose();
+    }
+
+    const parent = el.parentElement;
+    const canvasInstance = new fabric.Canvas(el, {
+      width: parent?.clientWidth || 800,
+      height: parent?.clientHeight || 600,
+      backgroundColor: '#fff'
+    });
+    
     setCanvas(canvasInstance);
     updateCanvasObjects(canvasInstance);
 
@@ -91,6 +105,25 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     canvasInstance.on('object:modified', onObjectModified);
     canvasInstance.on('object:added', onObjectAddedOrRemoved);
     canvasInstance.on('object:removed', onObjectAddedOrRemoved);
+    
+     // Add sample objects for demonstration
+    const rect = new fabric.Rect({
+        left: 100,
+        top: 100,
+        fill: 'red',
+        width: 200,
+        height: 100,
+    });
+    canvasInstance.add(rect);
+
+    const text = new fabric.Textbox('Hello world', {
+        left: 350,
+        top: 150,
+        width: 150,
+        fontSize: 20
+    });
+    canvasInstance.add(text);
+
 
     return () => {
         canvasInstance.off('selection:created', updateSelection);
@@ -99,9 +132,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         canvasInstance.off('object:modified', onObjectModified);
         canvasInstance.off('object:added', onObjectAddedOrRemoved);
         canvasInstance.off('object:removed', onObjectAddedOrRemoved);
+        canvasInstance.dispose();
     }
 
-  }, [updateCanvasObjects]);
+  }, [fabric, updateCanvasObjects, canvas]);
 
   const addObject = useCallback((type: 'rect' | 'circle' | 'textbox' | 'image' | 'barcode') => {
     if (!canvas || !fabric) {
