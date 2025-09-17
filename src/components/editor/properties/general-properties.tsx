@@ -13,8 +13,12 @@ interface GeneralPropertiesProps {
 export function GeneralProperties({ object, updateObject }: GeneralPropertiesProps) {
     const handleInputChange = (prop: string, value: string) => {
         const numValue = parseFloat(value);
-        if (!isNaN(numValue) && object.name) {
-            updateObject(object.name, { [prop]: numValue });
+        if (object.name) {
+            if (prop === 'name' || isNaN(numValue)) {
+                updateObject(object.name, { [prop]: value });
+            } else {
+                updateObject(object.name, { [prop]: numValue });
+            }
         }
     };
     
@@ -26,6 +30,11 @@ export function GeneralProperties({ object, updateObject }: GeneralPropertiesPro
 
   return (
     <div className="space-y-4">
+      <div>
+          <Label htmlFor="key" className="text-xs">Key</Label>
+          <Input id="key" type="text" value={object.name} onChange={(e) => handleInputChange('name', e.target.value)} />
+          <p className="text-xs text-muted-foreground mt-1">Unique identifier for data binding.</p>
+      </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label htmlFor="pos-x" className="text-xs">X</Label>

@@ -21,6 +21,7 @@ interface EditorContextType {
   exportAsPng: () => void;
   exportAsJpg: () => void;
   exportAsPdf: () => void;
+  applyJsonData: (jsonData: string) => void;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -50,7 +51,11 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     canvasInstance.on('selection:created', updateSelection);
     canvasInstance.on('selection:updated', updateSelection);
     canvasInstance.on('selection:cleared', updateSelection);
-    canvasInstance.on('object:modified', updateSelection);
+    canvasInstance.on('object:modified', (e) => {
+        // This ensures we have a fresh reference to the active object
+        // after modifications, which helps React state updates.
+        setActiveObject(e.target || null);
+    });
 
   }, []);
 
@@ -64,7 +69,15 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       return;
     };
     let obj;
-    const commonProps = { name: uuidv4() };
+    // Default key is the type followed by a number, e.g., "text-1", "image-2"
+    const existingKeys = canvas.getObjects().map(o => o.name);
+    let i = 1;
+    while(existingKeys.includes(`${type}-${i}`)) {
+      i++;
+    }
+    const defaultKey = `${type}-${i}`;
+
+    const commonProps = { name: defaultKey };
 
     switch (type) {
       case 'rect':
@@ -146,21 +159,24 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             }, { crossOrigin: 'anonymous' });
          } catch(e) {
             console.error(e);
+            toast({ title: "Invalid barcode data", variant: "destructive" });
          }
       } else {
         obj.set(properties);
 
         if (properties.width !== undefined && obj.width) {
-            obj.scaleX = properties.width / obj.width;
+            obj.scaleToWidth(properties.width);
         }
         if (properties.height !== undefined && obj.height) {
-            obj.scaleY = properties.height / obj.height;
+            obj.scaleToHeight(properties.height);
         }
         
         canvas.renderAll();
+        setActiveObject(obj); // Force re-render of properties panel
       }
     }
-  }, [canvas]);
+  }, [canvas, toast]);
+  
 
   const deleteActiveObject = useCallback(() => {
     if (!canvas || !activeObject) return;
@@ -245,6 +261,51 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: `Exported as ${format.toUpperCase()}!` });
   };
 
+  const applyJsonData = useCallback((jsonData: string) => {
+    if (!canvas) return;
+    try {
+      const data = JSON.parse(jsonData);
+      canvas.getObjects().forEach(obj => {
+        const key = obj.name;
+        if (key && data[key]) {
+          const value = data[key];
+          let properties: { [key: string]: any } = {};
+
+          if (typeof value === 'string') {
+            switch(obj.type) {
+                case 'textbox':
+                    properties.text = value;
+                    break;
+                case 'image':
+                    if (obj.get('objectType') === 'barcode') {
+                        properties.barcodeValue = value;
+                    } else {
+                        // This assumes the value is an image URL
+                        (obj as FabricType.Image).setSrc(value, () => canvas.renderAll(), { crossOrigin: 'anonymous' });
+                    }
+                    break;
+            }
+          } else if (typeof value === 'object' && value !== null) {
+              properties = value;
+          }
+
+          if (Object.keys(properties).length > 0) {
+            updateObject(key, properties);
+          }
+        }
+      });
+      toast({ title: "Data Applied Successfully!" });
+    } catch (error) {
+      console.error("Failed to parse or apply JSON data", error);
+      toast({
+        title: "Invalid JSON",
+        description: "Could not apply the data. Please check the JSON format.",
+        variant: "destructive",
+      });
+    }
+  }, [canvas, updateObject, toast]);
+
+
   const exportAsPng = () => exportCanvas('png');
   const exportAsJpg = () => exportCanvas('jpeg');
   const exportAsPdf = () => exportCanvas('pdf');
@@ -262,6 +323,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     exportAsPng,
     exportAsJpg,
     exportAsPdf,
+    applyJsonData,
   };
 
   return (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -23,8 +24,13 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { useEditor } from "../editor-provider";
 
 export function RightSidebar() {
-  const { activeObject } = useEditor();
+  const { activeObject, applyJsonData, canvas } = useEditor();
   const { toggleSidebar, state } = useSidebar();
+  const [jsonData, setJsonData] = useState('{\n  "text-1": "New Value",\n  "image-1": "https://picsum.photos/seed/new/400/300"\n}');
+
+  const handleApplyJson = () => {
+    applyJsonData(jsonData);
+  };
 
   return (
     <Sidebar side="right">
@@ -46,51 +52,40 @@ export function RightSidebar() {
                 <AccordionTrigger className="px-4">Canvas</AccordionTrigger>
                 <AccordionContent className="px-4 space-y-4">
                 <div>
-                    <Label>Predefined Sizes</Label>
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                    <Button variant="outline" size="sm">A4 Portrait</Button>
-                    <Button variant="outline" size="sm">A4 Landscape</Button>
-                    <Button variant="outline" size="sm">16:9</Button>
-                    <Button variant="outline" size="sm">9:16</Button>
-                    </div>
-                </div>
-                <div>
-                    <Label>Custom Size</Label>
+                    <Label>Canvas Size</Label>
                     <div className="flex gap-2 mt-2">
-                    <Input placeholder="Width" />
-                    <Input placeholder="Height" />
-                    <Button>Apply</Button>
+                    <Input placeholder="Width" type="number" value={canvas?.getWidth()} onChange={(e) => canvas?.setWidth(parseInt(e.target.value))} />
+                    <Input placeholder="Height" type="number" value={canvas?.getHeight()} onChange={(e) => canvas?.setHeight(parseInt(e.target.value))} />
                     </div>
                 </div>
                 <div>
-                    <Label>Background Image URL</Label>
-                    <Input placeholder="https://..." className="mt-2" />
-                </div>
-                <div className="flex items-center justify-between">
-                    <Label>Show Grid</Label>
-                    <Switch />
-                </div>
-                <div className="flex items-center justify-between">
-                    <Label>Snap to Grid</Label>
-                    <Switch />
+                    <Label>Background Color</Label>
+                    <Input type="color" value={canvas?.backgroundColor as string} onChange={(e) => {
+                        if (canvas) {
+                            canvas.backgroundColor = e.target.value;
+                            canvas.renderAll();
+                        }
+                    }} className="p-1" />
                 </div>
                 </AccordionContent>
             </AccordionItem>
             <AccordionItem value="data">
-                <AccordionTrigger className="px-4">Data</AccordionTrigger>
+                <AccordionTrigger className="px-4">Data Binding</AccordionTrigger>
                 <AccordionContent className="px-4 space-y-4">
                 <div>
-                    <Label>Single Label Mode (JSON)</Label>
-                    <Textarea placeholder='{ "name": "Product" }' className="mt-2 font-mono" />
-                    <Button className="mt-2 w-full">Apply</Button>
-                </div>
-                <div>
-                    <Label>Bulk Mode (JSON Array)</Label>
-                    <Textarea placeholder='[{ "name": "Product 1" }, { "name": "Product 2" }]' className="mt-2 font-mono" />
-                    <Button className="mt-2 w-full">
-                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin hidden" />
-                    Generate PDF
-                    </Button>
+                    <Label htmlFor="json-data">Single Label Mode (JSON)</Label>
+                    <Textarea 
+                      id="json-data"
+                      placeholder='{ "key-name": "New Value" }' 
+                      className="mt-2 font-mono"
+                      rows={6}
+                      value={jsonData}
+                      onChange={(e) => setJsonData(e.target.value)}
+                    />
+                    <Button className="mt-2 w-full" onClick={handleApplyJson}>Apply Data</Button>
+                    <p className="text-xs text-muted-foreground mt-2">
+                        Use the unique key of an element to update its content. For text, provide a string. For images or barcodes, provide a URL or new value.
+                    </p>
                 </div>
                 </AccordionContent>
             </AccordionItem>
