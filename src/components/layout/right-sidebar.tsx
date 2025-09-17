@@ -364,31 +364,6 @@ export function RightSidebar() {
                 </div>
               </AccordionContent>
             </AccordionItem>
-            <AccordionItem value="ai">
-              <AccordionTrigger className="px-4">AI Suggestions</AccordionTrigger>
-              <AccordionContent className="px-4 space-y-4">
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button className="w-full">
-                                <Sparkles className="mr-2 h-4 w-4" />
-                                Get AI Suggestions
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Get AI-powered design feedback</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-                <Alert>
-                  <AlertTitle>Design Tip</AlertTitle>
-                  <AlertDescription>
-                    Consider increasing the font size of the product name for
-                    better readability from a distance.
-                  </AlertDescription>
-                </Alert>
-              </AccordionContent>
-            </AccordionItem>
           </Accordion>
         )}
       </SidebarContent>
