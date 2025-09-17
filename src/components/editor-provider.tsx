@@ -473,7 +473,13 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
           if (typeof value === 'string') {
             switch (obj.type) {
               case 'textbox':
-                (obj as FabricType.Textbox).set('text', value);
+                const textbox = obj as FabricType.Textbox;
+                textbox.set('text', value);
+                // Make the textbox fit the new content
+                if (textbox.width) {
+                  const textWidth = textbox.getMinWidth();
+                  textbox.set('width', textWidth);
+                }
                 resolve();
                 break;
               case 'image':
