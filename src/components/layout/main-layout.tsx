@@ -13,11 +13,13 @@ export function MainLayout() {
       <div className="flex flex-col h-screen bg-background">
         <Navbar />
         <div className="flex flex-1 overflow-hidden">
-          <SidebarProvider>
+          <SidebarProvider id="left-sidebar">
             <LeftSidebar />
-            <main className="flex-1 flex flex-col overflow-auto">
-              <EditorWorkspace />
-            </main>
+          </SidebarProvider>
+          <main className="flex-1 flex flex-col overflow-auto">
+            <EditorWorkspace />
+          </main>
+          <SidebarProvider id="right-sidebar">
             <RightSidebar />
           </SidebarProvider>
         </div>
