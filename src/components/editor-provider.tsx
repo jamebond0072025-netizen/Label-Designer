@@ -463,59 +463,55 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const _applyDataToCanvas = async (canvasInstance: FabricType.Canvas, data: Record<string, any>) => {
-    const promises: Promise<void>[] = [];
-  
-    canvasInstance.getObjects().forEach(obj => {
+    const objects = canvasInstance.getObjects();
+    for (const obj of objects) {
       const key = obj.name;
       if (key && obj.get('isPlaceholder') && data[key]) {
         const value = data[key];
-        
-        const promise = new Promise<void>((resolve) => {
-            if (typeof value === 'string') {
-                switch(obj.type) {
-                    case 'textbox':
-                        (obj as FabricType.Textbox).set('text', value);
-                        resolve();
-                        break;
-                    case 'image':
-                        if (obj.get('objectType') === 'barcode') {
-                            const barcodeCanvas = document.createElement('canvas');
-                            try {
-                                JsBarcode(barcodeCanvas, value, { format: 'CODE128', displayValue: true, fontSize: 20 });
-                                (obj as FabricType.Image).setSrc(barcodeCanvas.toDataURL('image/png'), () => {
-                                    (obj as FabricType.Image).set('barcodeValue', value);
-                                    canvasInstance.renderAll();
-                                    resolve();
-                                }, { crossOrigin: 'anonymous' });
-                            } catch(e) {
-                                console.error("Error generating barcode", e);
-                                resolve(); // Resolve even on error to not block the process
-                            }
-                        } else {
-                            (obj as FabricType.Image).setSrc(value, () => {
-                                canvasInstance.renderAll();
-                                resolve();
-                            }, { crossOrigin: 'anonymous' });
-                        }
-                        break;
-                    default:
-                        resolve();
-                }
-            } else if (typeof value === 'object' && value !== null) {
-                obj.set(value);
+
+        await new Promise<void>((resolve) => {
+          if (typeof value === 'string') {
+            switch (obj.type) {
+              case 'textbox':
+                (obj as FabricType.Textbox).set('text', value);
                 resolve();
-            } else {
+                break;
+              case 'image':
+                if (obj.get('objectType') === 'barcode') {
+                  const barcodeCanvas = document.createElement('canvas');
+                  try {
+                    JsBarcode(barcodeCanvas, value, { format: 'CODE128', displayValue: true, fontSize: 20 });
+                    (obj as FabricType.Image).setSrc(barcodeCanvas.toDataURL('image/png'), () => {
+                      (obj as FabricType.Image).set('barcodeValue', value);
+                      canvasInstance.renderAll();
+                      resolve();
+                    }, { crossOrigin: 'anonymous' });
+                  } catch (e) {
+                    console.error("Error generating barcode", e);
+                    resolve();
+                  }
+                } else {
+                  (obj as FabricType.Image).setSrc(value, () => {
+                    canvasInstance.renderAll();
+                    resolve();
+                  }, { crossOrigin: 'anonymous' });
+                }
+                break;
+              default:
                 resolve();
             }
+          } else if (typeof value === 'object' && value !== null) {
+            obj.set(value);
+            resolve();
+          } else {
+            resolve();
+          }
         });
-        promises.push(promise);
       }
-    });
-
-    await Promise.all(promises);
+    }
     canvasInstance.renderAll();
   };
-
+  
   const applyJsonData = useCallback(async (jsonData: string) => {
     if (!canvas) return;
     try {
@@ -555,6 +551,11 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const labelWidth = canvas.getWidth();
     const labelHeight = canvas.getHeight();
     
+    if (labelWidth <= 0 || labelHeight <= 0) {
+        toast({ title: "Invalid Label Size", description: "Cannot export with zero width or height.", variant: "destructive" });
+        return;
+    }
+
     // A4 dimensions in pixels at 96 DPI
     const A4_WIDTH = 794;
     const A4_HEIGHT = 1122;
@@ -568,6 +569,11 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     
     const labelsPerRow = Math.floor((A4_WIDTH - MARGIN * 2) / labelWidth);
     const labelsPerCol = Math.floor((A4_HEIGHT - MARGIN * 2) / labelHeight);
+    
+    if (labelsPerRow === 0 || labelsPerCol === 0) {
+        toast({ title: "Label Too Large", description: "The label is too large to fit on an A4 page.", variant: "destructive" });
+        return;
+    }
     const labelsPerPage = labelsPerRow * labelsPerCol;
 
     // Create a temporary canvas to do the rendering
