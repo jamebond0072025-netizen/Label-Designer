@@ -21,18 +21,23 @@ export function TextProperties({ object, updateObject }: TextPropertiesProps) {
       updateObject(object.id, { [prop]: value });
     }
   };
+  
+  const isPlaceholder = object.get('isPlaceholder');
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="text-content">Content</Label>
-        <Textarea 
-          id="text-content" 
-          value={object.text} 
-          onChange={(e) => handlePropertyChange('text', e.target.value)} 
-          className="mt-1"
-        />
-      </div>
+      {!isPlaceholder && (
+         <div>
+            <Label htmlFor="text-content">Content</Label>
+            <Textarea 
+              id="text-content" 
+              value={object.text} 
+              onChange={(e) => handlePropertyChange('text', e.target.value)} 
+              className="mt-1"
+              disabled={isPlaceholder}
+            />
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label htmlFor="font-size">Font Size</Label>

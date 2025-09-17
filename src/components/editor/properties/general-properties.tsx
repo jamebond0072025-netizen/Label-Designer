@@ -17,7 +17,10 @@ export function GeneralProperties({ object, updateObject }: GeneralPropertiesPro
     const handleInputChange = (prop: string, value: string) => {
         const numValue = parseFloat(value);
         if (object.id) {
-            if (prop === 'name' || isNaN(numValue)) {
+            if (prop === 'name') {
+                 updateObject(object.id, { [prop]: value });
+            }
+            else if (isNaN(numValue)) {
                 updateObject(object.id, { [prop]: value });
             } else {
                 updateObject(object.id, { [prop]: numValue });
@@ -33,14 +36,13 @@ export function GeneralProperties({ object, updateObject }: GeneralPropertiesPro
 
   return (
     <div className="space-y-4">
-      {isPlaceholder && (
+      {isPlaceholder ? (
         <div>
             <Label htmlFor="key" className="text-xs">Key</Label>
-            <Input id="key" type="text" value={object.name} readOnly disabled />
+            <Input id="key" type="text" value={object.name} onChange={(e) => handleInputChange('name', e.target.value)} />
             <p className="text-xs text-muted-foreground mt-1">Unique identifier for data binding.</p>
         </div>
-      )}
-      {!isPlaceholder && (
+      ) : (
          <div>
             <Label htmlFor="name" className="text-xs">Name</Label>
             <Input id="name" type="text" value={object.name} onChange={(e) => handleInputChange('name', e.target.value)} />

@@ -200,16 +200,17 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
     switch (type) {
       case 'rect':
-        obj = new fabric.Rect({ ...commonProps, name: getUniqueKey('rect'), left: 50, top: 50, width: 100, height: 50, fill: '#F9A825' });
+        obj = new fabric.Rect({ ...commonProps, name: 'Rectangle', left: 50, top: 50, width: 100, height: 50, fill: '#F9A825' });
         break;
       case 'circle':
-        obj = new fabric.Circle({ ...commonProps, name: getUniqueKey('circle'), left: 50, top: 50, radius: 40, fill: '#29ABE2' });
+        obj = new fabric.Circle({ ...commonProps, name: 'Circle', left: 50, top: 50, radius: 40, fill: '#29ABE2' });
         break;
       case 'placeholder-text':
-        obj = new fabric.Textbox('Placeholder', { ...commonProps, name: getUniqueKey('text'), left: 50, top: 50, width: 150, fontSize: 20, isPlaceholder: true });
+        const textKey = getUniqueKey('text');
+        obj = new fabric.Textbox(`{{${textKey}}}`, { ...commonProps, name: textKey, left: 50, top: 50, width: 150, fontSize: 20, isPlaceholder: true });
         break;
       case 'static-text':
-        obj = new fabric.Textbox('Static Text', { ...commonProps, name: getUniqueKey('static-text'), left: 50, top: 50, width: 150, fontSize: 20, isPlaceholder: false });
+        obj = new fabric.Textbox('Static Text', { ...commonProps, name: 'Static Text', left: 50, top: 50, width: 150, fontSize: 20, isPlaceholder: false });
         break;
       case 'placeholder-image':
         fabric.Image.fromURL('https://picsum.photos/seed/product/400/300', (img) => {
@@ -222,7 +223,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         return;
        case 'static-image':
         fabric.Image.fromURL('https://picsum.photos/seed/static/400/300', (img) => {
-            img.set({ ...commonProps, name: getUniqueKey('static-image'), left: 50, top: 50, isPlaceholder: false });
+            img.set({ ...commonProps, name: 'Static Image', left: 50, top: 50, isPlaceholder: false });
             img.scaleToWidth(200);
             canvas.add(img);
             canvas.setActiveObject(img);
@@ -231,6 +232,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         return;
       case 'barcode':
         const barcodeValue = '1234567890';
+        const barcodeKey = getUniqueKey('barcode');
         const barcodeCanvas = document.createElement('canvas');
         try {
             JsBarcode(barcodeCanvas, barcodeValue, {
@@ -242,7 +244,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             fabric.Image.fromURL(dataUrl, (img) => {
                 img.set({
                     ...commonProps,
-                    name: getUniqueKey('barcode'),
+                    name: barcodeKey,
                     left: 50,
                     top: 50,
                     objectType: 'barcode', // Custom property
@@ -275,16 +277,23 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     if (!canvas) return;
     const obj = canvas.getObjects().find((o) => o.id === id);
     if (obj) {
-        if (properties.name && obj.name !== properties.name) {
-            const isNameTaken = canvas.getObjects().some(o => o.name === properties.name && o.id !== id);
+        // If the key (name) is being changed for a placeholder
+        if (properties.name && obj.get('isPlaceholder')) {
+            const newKey = properties.name;
+            const isNameTaken = canvas.getObjects().some(o => o.name === newKey && o.id !== id);
             if(isNameTaken) {
-                toast({ title: "Name already exists", description: "Please use a unique name for each element.", variant: "destructive" });
+                toast({ title: "Key already exists", description: "Please use a unique key for each placeholder.", variant: "destructive" });
                 // Force a re-render of properties panel to show the original value
                 setActiveObject(null);
                 setActiveObject(obj);
                 return;
             }
+            // If it's a textbox, update the text to match the new key
+            if (obj.type === 'textbox') {
+                (obj as FabricType.Textbox).set('text', `{{${newKey}}}`);
+            }
         }
+
       if (obj.get('objectType') === 'barcode' && properties.barcodeValue) {
         const barcodeCanvas = document.createElement('canvas');
          try {
