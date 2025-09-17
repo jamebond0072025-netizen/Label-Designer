@@ -16,64 +16,9 @@ const FabricCanvas = dynamic(() => import('./canvas').then(mod => mod.FabricCanv
 });
 
 export function EditorWorkspace() {
-  const { canvas, fabric, zoom, setZoom, zoomIn, zoomOut } = useEditor();
+  const { canvas, zoom, zoomIn, zoomOut } = useEditor();
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const fitCanvasToContainer = useCallback(() => {
-    if (!canvas || !fabric || !containerRef.current) return;
-
-    const container = containerRef.current;
-    const containerWidth = container.clientWidth - 32; // 2rem padding
-    const containerHeight = container.clientHeight - 32;
-    const canvasWidth = canvas.getWidth();
-    const canvasHeight = canvas.getHeight();
-
-    if (canvasWidth === 0 || canvasHeight === 0) return;
-
-    const scaleX = containerWidth / canvasWidth;
-    const scaleY = containerHeight / canvasHeight;
-    const newZoom = Math.min(scaleX, scaleY);
-
-    setZoom(newZoom);
-    canvas.setZoom(newZoom);
-
-    // Center the viewport
-    if (typeof canvas.getViewportTransform === 'function') {
-        const vpt = canvas.getViewportTransform();
-        if (vpt) {
-            vpt[4] = (container.clientWidth - canvasWidth * newZoom) / 2;
-            vpt[5] = (container.clientHeight - canvasHeight * newZoom) / 2;
-            canvas.setViewportTransform(vpt);
-        }
-    }
-
-    canvas.renderAll();
-  }, [canvas, fabric, setZoom]);
-
-  useLayoutEffect(() => {
-    fitCanvasToContainer();
-    
-    const observer = new ResizeObserver(() => fitCanvasToContainer());
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
-    
-    return () => {
-      if (containerRef.current) {
-        observer.unobserve(containerRef.current);
-      }
-    };
-  }, [fitCanvasToContainer]);
   
-   useLayoutEffect(() => {
-    // This effect runs specifically when the canvas dimensions change,
-    // to ensure we re-fit it to the container.
-    if(canvas) {
-        fitCanvasToContainer();
-    }
-  }, [canvas?.width, canvas?.height, fitCanvasToContainer]);
-
-
   return (
     <div className="flex flex-col h-full bg-muted/50 p-4 gap-4 overflow-hidden">
       <Toolbar />

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react';
 import type { fabric as FabricType } from 'fabric';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/hooks/use-toast';
@@ -13,7 +13,7 @@ interface EditorContextType {
   canvas: FabricType.Canvas | null;
   activeObject: FabricType.Object | null;
   canvasObjects: FabricType.Object[];
-  initCanvas: (el: HTMLCanvasElement) => void;
+  initCanvas: (el: HTMLCanvasElement, container: HTMLDivElement) => void;
   addObject: (type: 'rect' | 'circle' | 'textbox' | 'image' | 'barcode') => void;
   updateObject: (id: string, properties: any) => void;
   deleteActiveObject: () => void;
@@ -33,6 +33,7 @@ interface EditorContextType {
   setZoom: React.Dispatch<React.SetStateAction<number>>;
   zoomIn: () => void;
   zoomOut: () => void;
+  fitToScreen: () => void;
   setCanvasSize: (width: number, height: number) => void;
   setCanvasBackgroundColor: (color: string) => void;
   setCanvasBackgroundImage: (url: string) => void;
@@ -48,6 +49,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const [canvasObjects, setCanvasObjects] = useState<FabricType.Object[]>([]);
   const [zoom, setZoom] = useState(1);
   const { toast } = useToast();
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -59,7 +62,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   const updateCanvasObjects = useCallback((canvasInstance: FabricType.Canvas) => {
     const objects = canvasInstance.getObjects().map(obj => {
-        // Assign a unique ID if it doesn't have one
         if (!obj.id) {
             obj.id = uuidv4();
         }
@@ -68,18 +70,18 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     setCanvasObjects([...objects]);
   }, []);
 
-  const initCanvas = useCallback((el: HTMLCanvasElement) => {
+  const initCanvas = useCallback((el: HTMLCanvasElement, container: HTMLDivElement) => {
     if (!fabric) return;
     
-    // Dispose existing canvas if it exists
+    containerRef.current = container;
+    
     if(canvas) {
         canvas.dispose();
     }
 
-    const parent = el.parentElement;
     const canvasInstance = new fabric.Canvas(el, {
-      width: parent?.clientWidth || 800,
-      height: parent?.clientHeight || 600,
+      width: 800,
+      height: 600,
       backgroundColor: '#fff'
     });
     
@@ -106,7 +108,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     canvasInstance.on('object:added', onObjectAddedOrRemoved);
     canvasInstance.on('object:removed', onObjectAddedOrRemoved);
     
-     // Add sample objects for demonstration
     const rect = new fabric.Rect({
         left: 100,
         top: 100,
@@ -123,7 +124,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         fontSize: 20
     });
     canvasInstance.add(text);
-
 
     return () => {
         canvasInstance.off('selection:created', updateSelection);
@@ -223,7 +223,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             const isNameTaken = canvas.getObjects().some(o => o.name === properties.name && o.id !== id);
             if(isNameTaken) {
                 toast({ title: "Key already exists", description: "Please use a unique key for each element.", variant: "destructive" });
-                // Revert the name in the UI
                 setActiveObject(null);
                 setActiveObject(obj);
                 return;
@@ -462,6 +461,36 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     canvas.setZoom(newZoom);
     canvas.renderAll();
   };
+  
+  const fitToScreen = useCallback(() => {
+    if (!canvas || !fabric || !containerRef.current) return;
+
+    const container = containerRef.current;
+    const containerWidth = container.clientWidth - 32;
+    const containerHeight = container.clientHeight - 32;
+    const canvasWidth = canvas.getWidth();
+    const canvasHeight = canvas.getHeight();
+
+    if (canvasWidth === 0 || canvasHeight === 0) return;
+
+    const scaleX = containerWidth / canvasWidth;
+    const scaleY = containerHeight / canvasHeight;
+    const newZoom = Math.min(scaleX, scaleY);
+
+    setZoom(newZoom);
+    canvas.setZoom(newZoom);
+
+    if (typeof canvas.getViewportTransform === 'function') {
+        const vpt = canvas.getViewportTransform();
+        if (vpt) {
+            vpt[4] = (container.clientWidth - canvasWidth * newZoom) / 2;
+            vpt[5] = (container.clientHeight - canvasHeight * newZoom) / 2;
+            canvas.setViewportTransform(vpt);
+        }
+    }
+
+    canvas.renderAll();
+  }, [canvas, fabric]);
 
   const setCanvasSize = useCallback((width: number, height: number) => {
     if (canvas) {
@@ -521,6 +550,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     setZoom,
     zoomIn,
     zoomOut,
+    fitToScreen,
     setCanvasSize,
     setCanvasBackgroundColor,
     setCanvasBackgroundImage,

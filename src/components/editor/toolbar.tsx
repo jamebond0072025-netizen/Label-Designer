@@ -45,7 +45,7 @@ export function Toolbar() {
     exportAsPdf,
     zoomIn,
     zoomOut,
-    resetZoom,
+    fitToScreen,
   } = useEditor();
 
   return (
@@ -82,7 +82,7 @@ export function Toolbar() {
 
        <Button variant="ghost" size="icon" onClick={zoomIn}><ZoomIn /></Button>
       <Button variant="ghost" size="icon" onClick={zoomOut}><ZoomOut /></Button>
-      <Button variant="ghost" size="icon" onClick={resetZoom}><Maximize /></Button>
+      <Button variant="ghost" size="icon" onClick={fitToScreen}><Maximize /></Button>
 
       <Separator orientation="vertical" className="h-6" />
 
