@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
@@ -28,6 +29,13 @@ interface EditorContextType {
   toggleVisibility: (id: string) => void;
   toggleLock: (id: string) => void;
   setActiveObjectById: (id: string) => void;
+  zoom: number;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetZoom: () => void;
+  setCanvasSize: (width: number, height: number) => void;
+  setCanvasBackgroundColor: (color: string) => void;
+  setCanvasBackgroundImage: (url: string) => void;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -38,6 +46,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const [fabric, setFabric] = useState<typeof FabricType | null>(null);
   const [isSaveDialogOpen, setSaveDialogOpen] = useState(false);
   const [canvasObjects, setCanvasObjects] = useState<FabricType.Object[]>([]);
+  const [zoom, setZoom] = useState(1);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -397,6 +406,41 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [canvas]);
 
+  const zoomIn = () => setZoom(prev => Math.min(prev + 0.1, 3));
+  const zoomOut = () => setZoom(prev => Math.max(prev - 0.1, 0.1));
+  const resetZoom = () => setZoom(1);
+
+  const setCanvasSize = useCallback((width: number, height: number) => {
+    if (canvas) {
+      canvas.setDimensions({ width, height });
+      canvas.renderAll();
+      // Force a re-render of components that depend on canvas size
+      setCanvas(Object.create(canvas)); 
+    }
+  }, [canvas]);
+  
+  const setCanvasBackgroundColor = useCallback((color: string) => {
+    if (canvas) {
+      canvas.backgroundColor = color;
+      canvas.renderAll();
+       setCanvas(Object.create(canvas));
+    }
+  }, [canvas]);
+
+  const setCanvasBackgroundImage = useCallback((url: string) => {
+    if (!canvas || !fabric) return;
+    if (!url) {
+      canvas.setBackgroundImage(null, canvas.renderAll.bind(canvas));
+      return;
+    }
+    fabric.Image.fromURL(url, (img) => {
+      canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
+        scaleX: canvas.width ? canvas.width / (img.width || 1) : 1,
+        scaleY: canvas.height ? canvas.height / (img.height || 1) : 1,
+      });
+    }, { crossOrigin: 'anonymous' });
+  }, [canvas, fabric]);
+
   const exportAsPng = () => exportCanvas('png');
   const exportAsJpg = () => exportCanvas('jpeg');
   const exportAsPdf = () => exportCanvas('pdf');
@@ -421,6 +465,13 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     toggleVisibility,
     toggleLock,
     setActiveObjectById,
+    zoom,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    setCanvasSize,
+    setCanvasBackgroundColor,
+    setCanvasBackgroundImage,
   };
 
   return (

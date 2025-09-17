@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -41,11 +42,14 @@ export function Toolbar() {
     loadFromJson,
     exportAsPng,
     exportAsJpg,
-    exportAsPdf
+    exportAsPdf,
+    zoomIn,
+    zoomOut,
+    resetZoom,
   } = useEditor();
 
   return (
-    <div className="bg-background rounded-lg border shadow-sm p-2 flex items-center gap-2 flex-wrap">
+    <div className="bg-background rounded-lg border shadow-sm p-2 flex items-center gap-2 flex-wrap sticky top-0 z-10">
       <Button variant="ghost" size="icon"><Undo /></Button>
       <Button variant="ghost" size="icon"><Redo /></Button>
       
@@ -76,9 +80,9 @@ export function Toolbar() {
 
       <Separator orientation="vertical" className="h-6" />
 
-       <Button variant="ghost" size="icon"><ZoomIn /></Button>
-      <Button variant="ghost" size="icon"><ZoomOut /></Button>
-      <Button variant="ghost" size="icon"><Maximize /></Button>
+       <Button variant="ghost" size="icon" onClick={zoomIn}><ZoomIn /></Button>
+      <Button variant="ghost" size="icon" onClick={zoomOut}><ZoomOut /></Button>
+      <Button variant="ghost" size="icon" onClick={resetZoom}><Maximize /></Button>
 
       <Separator orientation="vertical" className="h-6" />
 
