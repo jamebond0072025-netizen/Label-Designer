@@ -11,6 +11,7 @@ import { SaveTemplateDialog } from './save-template-dialog';
 interface EditorContextType {
   canvas: FabricType.Canvas | null;
   activeObject: FabricType.Object | null;
+  canvasObjects: FabricType.Object[];
   initCanvas: (canvas: FabricType.Canvas) => void;
   addObject: (type: 'rect' | 'circle' | 'textbox' | 'image' | 'barcode') => void;
   updateObject: (id: string, properties: any) => void;
@@ -22,6 +23,11 @@ interface EditorContextType {
   exportAsJpg: () => void;
   exportAsPdf: () => void;
   applyJsonData: (jsonData: string) => void;
+  bringForward: (id: string) => void;
+  sendBackwards: (id: string) => void;
+  toggleVisibility: (id: string) => void;
+  toggleLock: (id: string) => void;
+  setActiveObjectById: (id: string) => void;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -31,6 +37,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const [activeObject, setActiveObject] = useState<FabricType.Object | null>(null);
   const [fabric, setFabric] = useState<typeof FabricType | null>(null);
   const [isSaveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [canvasObjects, setCanvasObjects] = useState<FabricType.Object[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -41,21 +48,44 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const updateCanvasObjects = useCallback((canvasInstance: FabricType.Canvas) => {
+    setCanvasObjects([...canvasInstance.getObjects()]);
+  }, []);
+
   const initCanvas = useCallback((canvasInstance: FabricType.Canvas) => {
     setCanvas(canvasInstance);
+    updateCanvasObjects(canvasInstance);
 
     const updateSelection = (e: FabricType.IEvent) => {
       setActiveObject(canvasInstance.getActiveObject() || null);
     };
+    
+    const onObjectModified = (e: FabricType.IEvent) => {
+        setActiveObject(e.target || null);
+        updateCanvasObjects(canvasInstance);
+    };
+
+    const onObjectAddedOrRemoved = () => {
+        updateCanvasObjects(canvasInstance);
+    }
 
     canvasInstance.on('selection:created', updateSelection);
     canvasInstance.on('selection:updated', updateSelection);
     canvasInstance.on('selection:cleared', updateSelection);
-    canvasInstance.on('object:modified', (e) => {
-        setActiveObject(e.target || null);
-    });
+    canvasInstance.on('object:modified', onObjectModified);
+    canvasInstance.on('object:added', onObjectAddedOrRemoved);
+    canvasInstance.on('object:removed', onObjectAddedOrRemoved);
 
-  }, []);
+    return () => {
+        canvasInstance.off('selection:created', updateSelection);
+        canvasInstance.off('selection:updated', updateSelection);
+        canvasInstance.off('selection:cleared', updateSelection);
+        canvasInstance.off('object:modified', onObjectModified);
+        canvasInstance.off('object:added', onObjectAddedOrRemoved);
+        canvasInstance.off('object:removed', onObjectAddedOrRemoved);
+    }
+
+  }, [updateCanvasObjects]);
 
   const addObject = useCallback((type: 'rect' | 'circle' | 'textbox' | 'image' | 'barcode') => {
     if (!canvas || !fabric) {
@@ -139,6 +169,16 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     if (!canvas) return;
     const obj = canvas.getObjects().find((o) => o.name === id);
     if (obj) {
+        if (obj.name !== properties.name && properties.name) {
+            const isNameTaken = canvas.getObjects().some(o => o.name === properties.name);
+            if(isNameTaken) {
+                toast({ title: "Key already exists", description: "Please use a unique key for each element.", variant: "destructive" });
+                // Revert the name in the UI
+                setActiveObject(null);
+                setActiveObject(obj);
+                return;
+            }
+        }
       if (obj.get('objectType') === 'barcode' && properties.barcodeValue) {
         const barcodeCanvas = document.createElement('canvas');
          try {
@@ -151,7 +191,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             (obj as FabricType.Image).setSrc(dataUrl, () => {
                 obj.set(properties);
                 canvas.renderAll();
-                // Force a re-render of the properties panel
+                updateCanvasObjects(canvas);
                 setActiveObject(null);
                 setActiveObject(obj);
             }, { crossOrigin: 'anonymous' });
@@ -170,14 +210,13 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         }
         
         canvas.renderAll();
-        // Force a re-render of the properties panel by creating a new object reference.
+        updateCanvasObjects(canvas);
         setActiveObject(null);
         setActiveObject(obj);
       }
     }
-  }, [canvas, toast]);
+  }, [canvas, toast, updateCanvasObjects]);
   
-
   const deleteActiveObject = useCallback(() => {
     if (!canvas || !activeObject) return;
     canvas.remove(activeObject);
@@ -185,7 +224,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     canvas.renderAll();
     setActiveObject(null);
   }, [canvas, activeObject]);
-
 
   const handleSave = useCallback((templateName: string) => {
     if (!canvas) return;
@@ -220,6 +258,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         const json = event.target?.result as string;
         canvas.loadFromJSON(json, () => {
           canvas.renderAll();
+          updateCanvasObjects(canvas);
           canvas.getObjects().forEach(obj => {
             if (obj.get('objectType') === 'barcode') {
               updateObject(obj.name!, { barcodeValue: obj.get('barcodeValue') });
@@ -231,7 +270,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       reader.readAsText(file);
     };
     input.click();
-  }, [canvas, toast, updateObject]);
+  }, [canvas, toast, updateObject, updateCanvasObjects]);
 
   const exportCanvas = (format: 'png' | 'jpeg' | 'pdf') => {
     if (!canvas) return;
@@ -303,6 +342,60 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [canvas, updateObject, toast]);
 
+  const bringForward = useCallback((id: string) => {
+    if (!canvas) return;
+    const obj = canvas.getObjects().find((o) => o.name === id);
+    if (obj) {
+      canvas.bringForward(obj);
+      canvas.renderAll();
+      updateCanvasObjects(canvas);
+    }
+  }, [canvas, updateCanvasObjects]);
+
+  const sendBackwards = useCallback((id: string) => {
+    if (!canvas) return;
+    const obj = canvas.getObjects().find((o) => o.name === id);
+    if (obj) {
+      canvas.sendBackwards(obj);
+      canvas.renderAll();
+      updateCanvasObjects(canvas);
+    }
+  }, [canvas, updateCanvasObjects]);
+
+  const toggleVisibility = useCallback((id: string) => {
+    if (!canvas) return;
+    const obj = canvas.getObjects().find((o) => o.name === id);
+    if (obj) {
+      obj.set({ visible: !obj.visible });
+      canvas.renderAll();
+      updateCanvasObjects(canvas);
+    }
+  }, [canvas, updateCanvasObjects]);
+
+  const toggleLock = useCallback((id: string) => {
+    if (!canvas) return;
+    const obj = canvas.getObjects().find((o) => o.name === id);
+    if (obj) {
+      obj.set({
+        lockMovementX: !obj.lockMovementX,
+        lockMovementY: !obj.lockMovementY,
+        lockRotation: !obj.lockRotation,
+        lockScalingX: !obj.lockScalingX,
+        lockScalingY: !obj.lockScalingY,
+      });
+      canvas.renderAll();
+      updateCanvasObjects(canvas);
+    }
+  }, [canvas, updateCanvasObjects]);
+
+  const setActiveObjectById = useCallback((id: string) => {
+    if (!canvas) return;
+    const obj = canvas.getObjects().find((o) => o.name === id);
+    if (obj) {
+      canvas.setActiveObject(obj);
+      canvas.renderAll();
+    }
+  }, [canvas]);
 
   const exportAsPng = () => exportCanvas('png');
   const exportAsJpg = () => exportCanvas('jpeg');
@@ -311,6 +404,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const value = {
     canvas,
     activeObject,
+    canvasObjects,
     initCanvas,
     addObject,
     updateObject,
@@ -322,6 +416,11 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     exportAsJpg,
     exportAsPdf,
     applyJsonData,
+    bringForward,
+    sendBackwards,
+    toggleVisibility,
+    toggleLock,
+    setActiveObjectById,
   };
 
   return (
