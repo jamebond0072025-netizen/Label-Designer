@@ -28,8 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Sparkles, PanelRight, ImageUp, FileDown } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { PanelRight, ImageUp, FileDown } from 'lucide-react';
 import { useEditor } from '../editor-provider';
 import { predefinedSizes } from '@/lib/predefined-sizes';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
@@ -47,14 +46,12 @@ export function RightSidebar() {
     setCanvasSize,
     setCanvasBackgroundColor,
     setCanvasBackgroundImage,
+    jsonData,
+    setJsonData,
+    bulkJsonData,
+    setBulkJsonData,
   } = useEditor();
   const { toggleSidebar, state } = useSidebar();
-  const [jsonData, setJsonData] = useState(
-    '{\n  "text-1": "New Value",\n  "image-1": "https://picsum.photos/seed/new/400/300"\n}'
-  );
-  const [bulkJsonData, setBulkJsonData] = useState(
-    '[\n  {\n    "text-1": "First Label",\n    "barcode-1": "111111"\n  },\n  {\n    "text-1": "Second Label",\n    "barcode-1": "222222"\n  }\n]'
-  );
   const [bgImageUrl, setBgImageUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -370,3 +367,5 @@ export function RightSidebar() {
     </Sidebar>
   );
 }
+
+    

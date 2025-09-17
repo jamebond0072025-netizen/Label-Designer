@@ -60,6 +60,10 @@ interface EditorContextType {
   alignTop: () => void;
   alignCenterVertical: () => void;
   alignBottom: () => void;
+  jsonData: string;
+  setJsonData: React.Dispatch<React.SetStateAction<string>>;
+  bulkJsonData: string;
+  setBulkJsonData: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -75,6 +79,13 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const [zoom, setZoom] = useState(1);
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const [jsonData, setJsonData] = useState(
+    '{\n  "text-1": "New Value",\n  "image-1": "https://picsum.photos/seed/new/400/300"\n}'
+  );
+  const [bulkJsonData, setBulkJsonData] = useState(
+    '[\n  {\n    "text-1": "First Label",\n    "barcode-1": "111111"\n  },\n  {\n    "text-1": "Second Label",\n    "barcode-1": "222222"\n  }\n]'
+  );
 
   // History state
   const [history, setHistory] = useState<CanvasHistory[]>([]);
@@ -133,7 +144,13 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const canvasInstance = new fabric.Canvas(el, {
       width: 800,
       height: 600,
-      backgroundColor: '#fff'
+      backgroundColor: '#fff',
+      selection: true,
+      defaultCursor: 'default',
+      // Panning state
+      isDragging: false,
+      lastPosX: 0,
+      lastPosY: 0,
     });
     
     setCanvas(canvasInstance);
@@ -153,6 +170,41 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         saveHistory(canvasInstance);
         updateCanvasObjects(canvasInstance);
     }
+
+    const onMouseDown = (opt: FabricType.IEvent) => {
+        const e = opt.e;
+        if (e.altKey === true) {
+            canvasInstance.isDragging = true;
+            canvasInstance.selection = false;
+            canvasInstance.lastPosX = e.clientX;
+            canvasInstance.lastPosY = e.clientY;
+            canvasInstance.setCursor('grabbing');
+        }
+    }
+
+    const onMouseMove = (opt: FabricType.IEvent) => {
+        if (canvasInstance.isDragging) {
+            const e = opt.e;
+            const vpt = canvasInstance.viewportTransform;
+            if (vpt) {
+                vpt[4] += e.clientX - canvasInstance.lastPosX;
+                vpt[5] += e.clientY - canvasInstance.lastPosY;
+                canvasInstance.requestRenderAll();
+                canvasInstance.lastPosX = e.clientX;
+                canvasInstance.lastPosY = e.clientY;
+            }
+        }
+    }
+
+    const onMouseUp = () => {
+        if (canvasInstance.isDragging) {
+            canvasInstance.setViewportTransform(canvasInstance.viewportTransform!);
+            canvasInstance.isDragging = false;
+            canvasInstance.selection = true;
+            canvasInstance.setCursor('default');
+            canvasInstance.renderAll();
+        }
+    }
     
     setHistory([]);
     setHistoryIndex(-1);
@@ -164,6 +216,9 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     canvasInstance.on('object:modified', onObjectModified);
     canvasInstance.on('object:added', onObjectAddedOrRemoved);
     canvasInstance.on('object:removed', onObjectAddedOrRemoved);
+    canvasInstance.on('mouse:down', onMouseDown);
+    canvasInstance.on('mouse:move', onMouseMove);
+    canvasInstance.on('mouse:up', onMouseUp);
     
     return () => {
         canvasInstance.off('selection:created', updateSelection);
@@ -172,6 +227,9 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         canvasInstance.off('object:modified', onObjectModified);
         canvasInstance.off('object:added', onObjectAddedOrRemoved);
         canvasInstance.off('object:removed', onObjectAddedOrRemoved);
+        canvasInstance.off('mouse:down', onMouseDown);
+        canvasInstance.off('mouse:move', onMouseMove);
+        canvasInstance.off('mouse:up', onMouseUp);
         canvasInstance.dispose();
     }
 
@@ -197,6 +255,30 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         return `${base}-${i}`;
     }
 
+    const updateJsonForNewPlaceholder = (key: string, type: 'text' | 'image' | 'barcode') => {
+        const defaultValue = type === 'image' ? 'https://picsum.photos/seed/new/400/300' 
+                             : type === 'barcode' ? '123456789'
+                             : 'New Value';
+
+        try {
+            // Update single JSON
+            const singleData = JSON.parse(jsonData);
+            singleData[key] = defaultValue;
+            setJsonData(JSON.stringify(singleData, null, 2));
+
+            // Update bulk JSON
+            const bulkData = JSON.parse(bulkJsonData);
+            if (Array.isArray(bulkData)) {
+                bulkData.forEach(item => {
+                    item[key] = defaultValue;
+                });
+                setBulkJsonData(JSON.stringify(bulkData, null, 2));
+            }
+        } catch (e) {
+            console.error("Failed to update JSON for new placeholder:", e);
+        }
+    };
+
     const commonProps = { id: uuidv4() };
 
     switch (type) {
@@ -209,17 +291,20 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       case 'placeholder-text':
         const textKey = getUniqueKey('text');
         obj = new fabric.Textbox(`{{${textKey}}}`, { ...commonProps, name: textKey, left: 50, top: 50, width: 150, fontSize: 20, isPlaceholder: true });
+        updateJsonForNewPlaceholder(textKey, 'text');
         break;
       case 'static-text':
         obj = new fabric.Textbox('Static Text', { ...commonProps, name: 'Static Text', left: 50, top: 50, width: 150, fontSize: 20, isPlaceholder: false });
         break;
       case 'placeholder-image':
+        const imageKey = getUniqueKey('image');
         fabric.Image.fromURL('https://picsum.photos/seed/product/400/300', (img) => {
-            img.set({ ...commonProps, name: getUniqueKey('image'), left: 50, top: 50, isPlaceholder: true });
+            img.set({ ...commonProps, name: imageKey, left: 50, top: 50, isPlaceholder: true });
             img.scaleToWidth(200);
             canvas.add(img);
             canvas.setActiveObject(img);
             canvas.renderAll();
+            updateJsonForNewPlaceholder(imageKey, 'image');
         }, { crossOrigin: 'anonymous' });
         return;
        case 'static-image':
@@ -256,6 +341,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
                 canvas.add(img);
                 canvas.setActiveObject(img);
                 canvas.renderAll();
+                updateJsonForNewPlaceholder(barcodeKey, 'barcode');
             });
         } catch (e) {
             console.error(e);
@@ -272,7 +358,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       canvas.setActiveObject(obj);
       canvas.renderAll();
     }
-  }, [canvas, fabric, toast]);
+  }, [canvas, fabric, toast, jsonData, bulkJsonData]);
 
  const updateObject = useCallback((id: string, properties: any) => {
     if (!canvas) return;
@@ -570,11 +656,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const pageContentHeight = A4_HEIGHT - MARGIN * 2;
     
     let scale = 1;
-    if (initialLabelWidth > pageContentWidth) {
-        scale = pageContentWidth / initialLabelWidth;
-    }
-    if (initialLabelHeight * scale > pageContentHeight) {
-        scale = pageContentHeight / initialLabelHeight;
+    if (initialLabelWidth > pageContentWidth || initialLabelHeight > pageContentHeight) {
+        const scaleX = pageContentWidth / initialLabelWidth;
+        const scaleY = pageContentHeight / initialLabelHeight;
+        scale = Math.min(scaleX, scaleY);
     }
     
     const labelWidth = initialLabelWidth * scale;
@@ -870,6 +955,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     alignTop,
     alignCenterVertical,
     alignBottom,
+    jsonData,
+    setJsonData,
+    bulkJsonData,
+    setBulkJsonData,
   };
 
   return (
@@ -891,3 +980,5 @@ export const useEditor = () => {
   }
   return context;
 };
+
+    
