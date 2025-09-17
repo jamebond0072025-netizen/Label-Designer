@@ -11,15 +11,20 @@ import { SaveTemplateDialog } from './save-template-dialog';
 
 type CanvasHistory = {
     json: string;
-    objects: FabricType.Object[];
 };
+
+type AddObjectType = 
+  | 'rect' | 'circle' 
+  | 'placeholder-text' | 'static-text'
+  | 'placeholder-image' | 'static-image'
+  | 'barcode';
 
 interface EditorContextType {
   canvas: FabricType.Canvas | null;
   activeObject: FabricType.Object | null;
   canvasObjects: FabricType.Object[];
   initCanvas: (el: HTMLCanvasElement, container: HTMLDivElement) => void;
-  addObject: (type: 'rect' | 'circle' | 'textbox' | 'image' | 'barcode') => void;
+  addObject: (type: AddObjectType) => void;
   updateObject: (id: string, properties: any) => void;
   deleteActiveObject: () => void;
   fabric: typeof FabricType | null;
@@ -58,7 +63,7 @@ interface EditorContextType {
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
-const CUSTOM_PROPS = ['id', 'name', 'objectType', 'barcodeValue'];
+const CUSTOM_PROPS = ['id', 'name', 'objectType', 'barcodeValue', 'isPlaceholder'];
 
 export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const [canvas, setCanvas] = useState<FabricType.Canvas | null>(null);
@@ -98,10 +103,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         return;
     }
     
-    const historyEntry: CanvasHistory = {
-      json,
-      objects: [...canvasInstance.getObjects()],
-    };
+    const historyEntry: CanvasHistory = { json };
     newHistory.push(historyEntry);
 
     setHistory(newHistory);
@@ -174,7 +176,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   }, [fabric, updateCanvasObjects, canvas, saveHistory]);
 
-  const addObject = useCallback((type: 'rect' | 'circle' | 'textbox' | 'image' | 'barcode') => {
+  const addObject = useCallback((type: AddObjectType) => {
     if (!canvas || !fabric) {
       toast({
         title: "Editor not ready",
@@ -184,28 +186,43 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       return;
     };
     let obj;
-    const existingKeys = canvas.getObjects().map(o => o.name);
-    let i = 1;
-    while(existingKeys.includes(`${type}-${i}`)) {
-      i++;
+    
+    const getUniqueKey = (base: string) => {
+        const existingKeys = canvas.getObjects().map(o => o.name);
+        let i = 1;
+        while(existingKeys.includes(`${base}-${i}`)) {
+            i++;
+        }
+        return `${base}-${i}`;
     }
-    const defaultKey = `${type}-${i}`;
 
-    const commonProps = { name: defaultKey, id: uuidv4() };
+    const commonProps = { id: uuidv4() };
 
     switch (type) {
       case 'rect':
-        obj = new fabric.Rect({ ...commonProps, left: 50, top: 50, width: 100, height: 50, fill: '#F9A825' });
+        obj = new fabric.Rect({ ...commonProps, name: getUniqueKey('rect'), left: 50, top: 50, width: 100, height: 50, fill: '#F9A825' });
         break;
       case 'circle':
-        obj = new fabric.Circle({ ...commonProps, left: 50, top: 50, radius: 40, fill: '#29ABE2' });
+        obj = new fabric.Circle({ ...commonProps, name: getUniqueKey('circle'), left: 50, top: 50, radius: 40, fill: '#29ABE2' });
         break;
-      case 'textbox':
-        obj = new fabric.Textbox('New Text', { ...commonProps, left: 50, top: 50, width: 150, fontSize: 20 });
+      case 'placeholder-text':
+        obj = new fabric.Textbox('Placeholder', { ...commonProps, name: getUniqueKey('text'), left: 50, top: 50, width: 150, fontSize: 20, isPlaceholder: true });
         break;
-      case 'image':
+      case 'static-text':
+        obj = new fabric.Textbox('Static Text', { ...commonProps, name: getUniqueKey('static-text'), left: 50, top: 50, width: 150, fontSize: 20, isPlaceholder: false });
+        break;
+      case 'placeholder-image':
         fabric.Image.fromURL('https://picsum.photos/seed/product/400/300', (img) => {
-            img.set({ ...commonProps, left: 50, top: 50 });
+            img.set({ ...commonProps, name: getUniqueKey('image'), left: 50, top: 50, isPlaceholder: true });
+            img.scaleToWidth(200);
+            canvas.add(img);
+            canvas.setActiveObject(img);
+            canvas.renderAll();
+        }, { crossOrigin: 'anonymous' });
+        return;
+       case 'static-image':
+        fabric.Image.fromURL('https://picsum.photos/seed/static/400/300', (img) => {
+            img.set({ ...commonProps, name: getUniqueKey('static-image'), left: 50, top: 50, isPlaceholder: false });
             img.scaleToWidth(200);
             canvas.add(img);
             canvas.setActiveObject(img);
@@ -225,10 +242,12 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             fabric.Image.fromURL(dataUrl, (img) => {
                 img.set({
                     ...commonProps,
+                    name: getUniqueKey('barcode'),
                     left: 50,
                     top: 50,
                     objectType: 'barcode', // Custom property
-                    barcodeValue: barcodeValue
+                    barcodeValue: barcodeValue,
+                    isPlaceholder: true,
                 });
                 img.scaleToWidth(200);
                 canvas.add(img);
@@ -259,7 +278,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         if (properties.name && obj.name !== properties.name) {
             const isNameTaken = canvas.getObjects().some(o => o.name === properties.name && o.id !== id);
             if(isNameTaken) {
-                toast({ title: "Key already exists", description: "Please use a unique key for each element.", variant: "destructive" });
+                toast({ title: "Name already exists", description: "Please use a unique name for each element.", variant: "destructive" });
                 // Force a re-render of properties panel to show the original value
                 setActiveObject(null);
                 setActiveObject(obj);
@@ -398,9 +417,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const currentVpt = canvas.viewportTransform;
 
     // Reset zoom and viewport for export
-    canvas.setZoom(1);
-    canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-    canvas.renderAll();
+    fitToScreen();
 
 
     const dataUrl = canvas.toDataURL({
@@ -441,7 +458,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       const data = JSON.parse(jsonData);
       canvas.getObjects().forEach(obj => {
         const key = obj.name;
-        if (key && data[key]) {
+        if (key && obj.get('isPlaceholder') && data[key]) {
           const value = data[key];
           let properties: { [key: string]: any } = {};
 

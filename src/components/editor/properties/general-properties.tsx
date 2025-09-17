@@ -12,6 +12,8 @@ interface GeneralPropertiesProps {
 }
 
 export function GeneralProperties({ object, updateObject }: GeneralPropertiesProps) {
+    const isPlaceholder = object.get('isPlaceholder');
+
     const handleInputChange = (prop: string, value: string) => {
         const numValue = parseFloat(value);
         if (object.id) {
@@ -31,11 +33,20 @@ export function GeneralProperties({ object, updateObject }: GeneralPropertiesPro
 
   return (
     <div className="space-y-4">
-      <div>
-          <Label htmlFor="key" className="text-xs">Key</Label>
-          <Input id="key" type="text" value={object.name} onChange={(e) => handleInputChange('name', e.target.value)} />
-          <p className="text-xs text-muted-foreground mt-1">Unique identifier for data binding.</p>
-      </div>
+      {isPlaceholder && (
+        <div>
+            <Label htmlFor="key" className="text-xs">Key</Label>
+            <Input id="key" type="text" value={object.name} readOnly disabled />
+            <p className="text-xs text-muted-foreground mt-1">Unique identifier for data binding.</p>
+        </div>
+      )}
+      {!isPlaceholder && (
+         <div>
+            <Label htmlFor="name" className="text-xs">Name</Label>
+            <Input id="name" type="text" value={object.name} onChange={(e) => handleInputChange('name', e.target.value)} />
+            <p className="text-xs text-muted-foreground mt-1">Layer name.</p>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label htmlFor="pos-x" className="text-xs">X</Label>

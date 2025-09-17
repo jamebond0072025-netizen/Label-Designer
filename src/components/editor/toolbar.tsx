@@ -7,6 +7,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -35,6 +36,7 @@ import {
   AlignEndVertical,
   BringToFront,
   SendToBack,
+  Text,
 } from "lucide-react";
 import { useEditor } from "../editor-provider";
 
@@ -89,12 +91,19 @@ export function Toolbar() {
             <Button variant="outline"><Plus className="mr-2" /> Add Element</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => addObject('textbox')}>
-              <Type className="mr-2" /> Text
+            <DropdownMenuItem onClick={() => addObject('placeholder-text')}>
+              <Type className="mr-2" /> Placeholder Text
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addObject('image')}>
-              <ImageIcon className="mr-2" /> Image Placeholder
+             <DropdownMenuItem onClick={() => addObject('static-text')}>
+              <Text className="mr-2" /> Static Text
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addObject('placeholder-image')}>
+              <ImageIcon className="mr-2" /> Placeholder Image
+            </DropdownMenuItem>
+             <DropdownMenuItem onClick={() => addObject('static-image')}>
+              <ImageIcon className="mr-2" /> Static Image
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => addObject('rect')}>
               <RectangleHorizontal className="mr-2" /> Rectangle
             </DropdownMenuItem>
