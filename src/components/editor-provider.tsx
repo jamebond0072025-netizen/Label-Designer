@@ -552,19 +552,32 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "Generating PDF...", description: `Processing ${dataArray.length} labels.` });
 
     const originalJson = canvas.toJSON(CUSTOM_PROPS);
+    const labelWidth = canvas.getWidth();
+    const labelHeight = canvas.getHeight();
+    
+    // A4 dimensions in pixels at 96 DPI
+    const A4_WIDTH = 794;
+    const A4_HEIGHT = 1122;
+    const MARGIN = 20; // 20px margin
+
     const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? 'l' : 'p',
+        orientation: 'p',
         unit: 'px',
-        format: [canvas.width, canvas.height]
+        format: 'a4'
     });
     
+    const labelsPerRow = Math.floor((A4_WIDTH - MARGIN * 2) / labelWidth);
+    const labelsPerCol = Math.floor((A4_HEIGHT - MARGIN * 2) / labelHeight);
+    const labelsPerPage = labelsPerRow * labelsPerCol;
+
     // Create a temporary canvas to do the rendering
     const tempCanvasEl = document.createElement('canvas');
     const tempCanvas = new fabric.Canvas(tempCanvasEl, {
-        width: canvas.getWidth(),
-        height: canvas.getHeight(),
+        width: labelWidth,
+        height: labelHeight,
     });
-
+    
+    let labelCount = 0;
     for (let i = 0; i < dataArray.length; i++) {
         const data = dataArray[i];
         
@@ -576,14 +589,25 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
         // Add to PDF
         const dataUrl = tempCanvas.toDataURL({ format: 'png', quality: 1, multiplier: 2 });
-        if (i > 0) {
+        
+        const pageIndex = Math.floor(i / labelsPerPage);
+        if (i > 0 && i % labelsPerPage === 0) {
             pdf.addPage();
         }
-        pdf.addImage(dataUrl, 'PNG', 0, 0, canvas.width, canvas.height);
+
+        const indexOnPage = i % labelsPerPage;
+        const row = Math.floor(indexOnPage / labelsPerRow);
+        const col = indexOnPage % labelsPerRow;
+
+        const x = MARGIN + col * labelWidth;
+        const y = MARGIN + row * labelHeight;
+
+        pdf.addImage(dataUrl, 'PNG', x, y, labelWidth, labelHeight);
+        labelCount++;
     }
     
     pdf.save('bulk-labels.pdf');
-    toast({ title: "PDF Generated!", description: "Your bulk labels have been downloaded." });
+    toast({ title: "PDF Generated!", description: `Your bulk labels PDF with ${labelCount} labels has been downloaded.` });
 
   }, [canvas, fabric, toast]);
 
