@@ -80,12 +80,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const [jsonData, setJsonData] = useState(
-    '{\n  "text-1": "New Value",\n  "image-1": "https://picsum.photos/seed/new/400/300"\n}'
-  );
-  const [bulkJsonData, setBulkJsonData] = useState(
-    '[\n  {\n    "text-1": "First Label",\n    "barcode-1": "111111"\n  },\n  {\n    "text-1": "Second Label",\n    "barcode-1": "222222"\n  }\n]'
-  );
+  const [jsonData, setJsonData] = useState('{\n\n}');
+  const [bulkJsonData, setBulkJsonData] = useState('[\n\n]');
 
   // History state
   const [history, setHistory] = useState<CanvasHistory[]>([]);
@@ -268,11 +264,14 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
             // Update bulk JSON
             const bulkData = JSON.parse(bulkJsonData);
-            if (Array.isArray(bulkData)) {
+            if (Array.isArray(bulkData) && bulkData.length > 0) {
                 bulkData.forEach(item => {
                     item[key] = defaultValue;
                 });
                 setBulkJsonData(JSON.stringify(bulkData, null, 2));
+            } else {
+                 const newBulkData = [{ [key]: defaultValue }];
+                 setBulkJsonData(JSON.stringify(newBulkData, null, 2));
             }
         } catch (e) {
             console.error("Failed to update JSON for new placeholder:", e);
@@ -366,8 +365,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     if (obj) {
         // If the key (name) is being changed for a placeholder
         if (properties.name && obj.get('isPlaceholder')) {
+            const oldKey = obj.name;
             const newKey = properties.name;
             const isNameTaken = canvas.getObjects().some(o => o.name === newKey && o.id !== id);
+            
             if(isNameTaken) {
                 toast({ title: "Key already exists", description: "Please use a unique key for each placeholder.", variant: "destructive" });
                 // Force a re-render of properties panel to show the original value
@@ -375,6 +376,34 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
                 setActiveObject(obj);
                 return;
             }
+            
+            // Update the JSON keys
+            const updateJsonKey = (jsonString: string) => {
+                try {
+                    const data = JSON.parse(jsonString);
+                    if (Array.isArray(data)) {
+                        data.forEach(item => {
+                            if (item.hasOwnProperty(oldKey)) {
+                                item[newKey] = item[oldKey];
+                                delete item[oldKey];
+                            }
+                        });
+                    } else if (typeof data === 'object' && data !== null) {
+                        if (data.hasOwnProperty(oldKey)) {
+                            data[newKey] = data[oldKey];
+                            delete data[oldKey];
+                        }
+                    }
+                    return JSON.stringify(data, null, 2);
+                } catch (e) {
+                    console.error("Failed to update JSON key:", e);
+                    return jsonString; // Return original on error
+                }
+            };
+
+            setJsonData(updateJsonKey(jsonData));
+            setBulkJsonData(updateJsonKey(bulkJsonData));
+
             // If it's a textbox, update the text to match the new key
             if (obj.type === 'textbox') {
                 (obj as FabricType.Textbox).set('text', `{{${newKey}}}`);
@@ -419,7 +448,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         setActiveObject(obj);
       }
     }
-  }, [canvas, toast, updateCanvasObjects, saveHistory]);
+  }, [canvas, toast, updateCanvasObjects, saveHistory, jsonData, bulkJsonData]);
   
   const deleteActiveObject = useCallback(() => {
     if (!canvas || !activeObject) return;
@@ -563,8 +592,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
                 textbox.set('text', value);
                 // Make the textbox fit the new content
                 if (textbox.width) {
-                  const textWidth = textbox.getMinWidth();
-                  textbox.set('width', textWidth);
+                  textbox.set('width', textbox.getMinWidth());
                 }
                 resolve();
                 break;
@@ -659,7 +687,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     if (initialLabelWidth > pageContentWidth || initialLabelHeight > pageContentHeight) {
         const scaleX = pageContentWidth / initialLabelWidth;
         const scaleY = pageContentHeight / initialLabelHeight;
-        scale = Math.min(scaleX, scaleY);
+        scale = Math.min(scaleX, scaleY, 1);
     }
     
     const labelWidth = initialLabelWidth * scale;
@@ -982,3 +1010,4 @@ export const useEditor = () => {
 };
 
     
+
