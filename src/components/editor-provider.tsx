@@ -219,10 +219,11 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     if (!canvas) return;
     const obj = canvas.getObjects().find((o) => o.id === id);
     if (obj) {
-        if (obj.name !== properties.name && properties.name) {
+        if (properties.name && obj.name !== properties.name) {
             const isNameTaken = canvas.getObjects().some(o => o.name === properties.name && o.id !== id);
             if(isNameTaken) {
                 toast({ title: "Key already exists", description: "Please use a unique key for each element.", variant: "destructive" });
+                // Force a re-render of properties panel to show the original value
                 setActiveObject(null);
                 setActiveObject(obj);
                 return;
@@ -323,12 +324,29 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   const exportCanvas = (format: 'png' | 'jpeg' | 'pdf') => {
     if (!canvas) return;
+
+    // Save current state
+    const currentZoom = canvas.getZoom();
+    const currentVpt = canvas.viewportTransform;
+
+    // Reset zoom and viewport for export
+    canvas.setZoom(1);
+    canvas.viewportTransform = [1, 0, 0, 1, 0, 0];
+    canvas.renderAll();
+
     const dataUrl = canvas.toDataURL({
       format: format === 'pdf' ? 'png' : format,
       quality: 1,
-      multiplier: 2
+      multiplier: 2 // Export at 2x resolution for better quality
     });
 
+    // Restore canvas state
+    if (currentVpt) {
+      canvas.setZoom(currentZoom);
+      canvas.setViewportTransform(currentVpt);
+      canvas.renderAll();
+    }
+    
     if (format === 'pdf') {
       const pdf = new jsPDF({
         orientation: canvas.width > canvas.height ? 'l' : 'p',
@@ -576,3 +594,5 @@ export const useEditor = () => {
   }
   return context;
 };
+
+    
