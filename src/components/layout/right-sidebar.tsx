@@ -28,11 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Sparkles, PanelRight, ImageUp } from 'lucide-react';
+import { Sparkles, PanelRight, ImageUp, FileDown } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { useEditor } from '../editor-provider';
 import { predefinedSizes } from '@/lib/predefined-sizes';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { Separator } from '../ui/separator';
 
 const DPI = 96;
 const MM_TO_IN = 0.0393701;
@@ -41,6 +42,7 @@ export function RightSidebar() {
   const {
     activeObject,
     applyJsonData,
+    exportBulkPdf,
     canvas,
     setCanvasSize,
     setCanvasBackgroundColor,
@@ -49,6 +51,9 @@ export function RightSidebar() {
   const { toggleSidebar, state } = useSidebar();
   const [jsonData, setJsonData] = useState(
     '{\n  "text-1": "New Value",\n  "image-1": "https://picsum.photos/seed/new/400/300"\n}'
+  );
+  const [bulkJsonData, setBulkJsonData] = useState(
+    '[\n  {\n    "text-1": "First Label",\n    "barcode-1": "111111"\n  },\n  {\n    "text-1": "Second Label",\n    "barcode-1": "222222"\n  }\n]'
   );
   const [bgImageUrl, setBgImageUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -79,6 +84,10 @@ export function RightSidebar() {
   const handleApplyJson = () => {
     applyJsonData(jsonData);
   };
+  
+  const handleBulkGenerate = () => {
+    exportBulkPdf(bulkJsonData);
+  }
 
   const handleBgImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -332,6 +341,25 @@ export function RightSidebar() {
                     Use the unique key of an element to update its content. For
                     text, provide a string. For images or barcodes, provide a
                     URL or new value.
+                  </p>
+                </div>
+                <Separator />
+                <div>
+                   <Label htmlFor="bulk-json-data">Bulk Generate Mode (JSON Array)</Label>
+                   <Textarea
+                    id="bulk-json-data"
+                    placeholder='[ { "key": "value" }, { "key": "value" } ]'
+                    className="mt-2 font-mono"
+                    rows={8}
+                    value={bulkJsonData}
+                    onChange={(e) => setBulkJsonData(e.target.value)}
+                  />
+                   <Button className="mt-2 w-full" onClick={handleBulkGenerate}>
+                     <FileDown className="mr-2 h-4 w-4" />
+                    Generate & Download PDF
+                  </Button>
+                   <p className="text-xs text-muted-foreground mt-2">
+                    Provide an array of JSON objects. Each object will generate one page in the final PDF.
                   </p>
                 </div>
               </AccordionContent>

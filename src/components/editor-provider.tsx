@@ -33,6 +33,7 @@ interface EditorContextType {
   exportAsPng: () => void;
   exportAsJpg: () => void;
   exportAsPdf: () => void;
+  exportBulkPdf: (jsonData: string) => void;
   applyJsonData: (jsonData: string) => void;
   bringForward: () => void;
   sendBackwards: () => void;
@@ -461,38 +462,67 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: `Exported as ${format.toUpperCase()}!` });
   };
 
-  const applyJsonData = useCallback((jsonData: string) => {
+  const _applyDataToCanvas = async (canvasInstance: FabricType.Canvas, data: Record<string, any>) => {
+    const promises: Promise<void>[] = [];
+  
+    canvasInstance.getObjects().forEach(obj => {
+      const key = obj.name;
+      if (key && obj.get('isPlaceholder') && data[key]) {
+        const value = data[key];
+        
+        const promise = new Promise<void>((resolve) => {
+            if (typeof value === 'string') {
+                switch(obj.type) {
+                    case 'textbox':
+                        (obj as FabricType.Textbox).set('text', value);
+                        resolve();
+                        break;
+                    case 'image':
+                        if (obj.get('objectType') === 'barcode') {
+                            const barcodeCanvas = document.createElement('canvas');
+                            try {
+                                JsBarcode(barcodeCanvas, value, { format: 'CODE128', displayValue: true, fontSize: 20 });
+                                (obj as FabricType.Image).setSrc(barcodeCanvas.toDataURL('image/png'), () => {
+                                    (obj as FabricType.Image).set('barcodeValue', value);
+                                    canvasInstance.renderAll();
+                                    resolve();
+                                }, { crossOrigin: 'anonymous' });
+                            } catch(e) {
+                                console.error("Error generating barcode", e);
+                                resolve(); // Resolve even on error to not block the process
+                            }
+                        } else {
+                            (obj as FabricType.Image).setSrc(value, () => {
+                                canvasInstance.renderAll();
+                                resolve();
+                            }, { crossOrigin: 'anonymous' });
+                        }
+                        break;
+                    default:
+                        resolve();
+                }
+            } else if (typeof value === 'object' && value !== null) {
+                obj.set(value);
+                resolve();
+            } else {
+                resolve();
+            }
+        });
+        promises.push(promise);
+      }
+    });
+
+    await Promise.all(promises);
+    canvasInstance.renderAll();
+  };
+
+  const applyJsonData = useCallback(async (jsonData: string) => {
     if (!canvas) return;
     try {
       const data = JSON.parse(jsonData);
-      canvas.getObjects().forEach(obj => {
-        const key = obj.name;
-        if (key && obj.get('isPlaceholder') && data[key]) {
-          const value = data[key];
-          let properties: { [key: string]: any } = {};
-
-          if (typeof value === 'string') {
-            switch(obj.type) {
-                case 'textbox':
-                    properties.text = value;
-                    break;
-                case 'image':
-                    if (obj.get('objectType') === 'barcode') {
-                        properties.barcodeValue = value;
-                    } else {
-                        (obj as FabricType.Image).setSrc(value, () => canvas.renderAll(), { crossOrigin: 'anonymous' });
-                    }
-                    break;
-            }
-          } else if (typeof value === 'object' && value !== null) {
-              properties = value;
-          }
-
-          if (Object.keys(properties).length > 0) {
-            updateObject(obj.id!, properties);
-          }
-        }
-      });
+      await _applyDataToCanvas(canvas, data);
+      saveHistory(canvas);
+      updateCanvasObjects(canvas);
       toast({ title: "Data Applied Successfully!" });
     } catch (error) {
       console.error("Failed to parse or apply JSON data", error);
@@ -502,7 +532,60 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         variant: "destructive",
       });
     }
-  }, [canvas, updateObject, toast]);
+  }, [canvas, updateCanvasObjects, toast, saveHistory]);
+
+  const exportBulkPdf = useCallback(async (jsonData: string) => {
+    if (!canvas || !fabric) return;
+
+    let dataArray;
+    try {
+        const parsedData = JSON.parse(jsonData);
+        if (!Array.isArray(parsedData)) {
+            throw new Error("JSON data is not an array.");
+        }
+        dataArray = parsedData;
+    } catch (error: any) {
+        toast({ title: "Invalid JSON Array", description: error.message, variant: "destructive" });
+        return;
+    }
+
+    toast({ title: "Generating PDF...", description: `Processing ${dataArray.length} labels.` });
+
+    const originalJson = canvas.toJSON(CUSTOM_PROPS);
+    const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? 'l' : 'p',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+    });
+    
+    // Create a temporary canvas to do the rendering
+    const tempCanvasEl = document.createElement('canvas');
+    const tempCanvas = new fabric.Canvas(tempCanvasEl, {
+        width: canvas.getWidth(),
+        height: canvas.getHeight(),
+    });
+
+    for (let i = 0; i < dataArray.length; i++) {
+        const data = dataArray[i];
+        
+        // Load the template
+        await new Promise<void>(resolve => tempCanvas.loadFromJSON(originalJson, () => resolve()));
+        
+        // Apply data
+        await _applyDataToCanvas(tempCanvas, data);
+
+        // Add to PDF
+        const dataUrl = tempCanvas.toDataURL({ format: 'png', quality: 1, multiplier: 2 });
+        if (i > 0) {
+            pdf.addPage();
+        }
+        pdf.addImage(dataUrl, 'PNG', 0, 0, canvas.width, canvas.height);
+    }
+    
+    pdf.save('bulk-labels.pdf');
+    toast({ title: "PDF Generated!", description: "Your bulk labels have been downloaded." });
+
+  }, [canvas, fabric, toast]);
 
   const bringForward = useCallback(() => {
     if (!canvas || !activeObject) return;
@@ -712,6 +795,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     exportAsPng,
     exportAsJpg,
     exportAsPdf,
+    exportBulkPdf,
     applyJsonData,
     bringForward: () => bringForward(),
     sendBackwards: () => sendBackwards(),
