@@ -38,11 +38,13 @@ export function EditorWorkspace() {
     canvas.setZoom(newZoom);
 
     // Center the viewport
-    const vpt = canvas.getViewportTransform();
-    if (vpt) {
-        vpt[4] = (container.clientWidth - canvasWidth * newZoom) / 2;
-        vpt[5] = (container.clientHeight - canvasHeight * newZoom) / 2;
-        canvas.setViewportTransform(vpt);
+    if (typeof canvas.getViewportTransform === 'function') {
+        const vpt = canvas.getViewportTransform();
+        if (vpt) {
+            vpt[4] = (container.clientWidth - canvasWidth * newZoom) / 2;
+            vpt[5] = (container.clientHeight - canvasHeight * newZoom) / 2;
+            canvas.setViewportTransform(vpt);
+        }
     }
 
     canvas.renderAll();
