@@ -138,17 +138,16 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [canvas, fabric, toast]);
 
-  const updateObject = useCallback((id: string, properties: any) => {
+ const updateObject = useCallback((id: string, properties: any) => {
     if (!canvas) return;
     const obj = canvas.getObjects().find((o) => o.name === id);
     if (obj) {
-      
       // Handle special case for barcode regeneration
       if (obj.get('objectType') === 'barcode' && properties.barcodeValue) {
         const barcodeCanvas = document.createElement('canvas');
          try {
             JsBarcode(barcodeCanvas, properties.barcodeValue, {
-              format: 'CODE128',
+              format: 'CODE128', // Default or from object properties
               displayValue: true,
               fontSize: 20
             });
@@ -164,6 +163,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       } else {
         obj.set(properties);
 
+        // Fabric's `set` doesn't handle scaling for width/height directly, so we need to do it manually.
         if (properties.width !== undefined && obj.width) {
             obj.scaleToWidth(properties.width);
         }
@@ -172,7 +172,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         }
         
         canvas.renderAll();
-        setActiveObject(obj); // Force re-render of properties panel
+        // Create a new object reference to trigger React's state update.
+        setActiveObject({ ...obj });
       }
     }
   }, [canvas, toast]);
