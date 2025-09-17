@@ -19,9 +19,19 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
-import { Sparkles, PanelRight, Upload } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Sparkles, PanelRight, Upload, FileUp, ImageUp } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { useEditor } from "../editor-provider";
+import { predefinedSizes } from "@/lib/predefined-sizes";
 
 export function RightSidebar() {
   const {
@@ -58,6 +68,13 @@ export function RightSidebar() {
     fileInputRef.current?.click();
   };
 
+  const handlePresetChange = (value: string) => {
+    const [width, height] = value.split('x').map(Number);
+    if (!isNaN(width) && !isNaN(height)) {
+        setCanvasSize(width, height);
+    }
+  };
+
   return (
     <Sidebar side="right">
       <SidebarHeader>
@@ -77,16 +94,65 @@ export function RightSidebar() {
             <AccordionItem value="canvas">
               <AccordionTrigger className="px-4">Canvas</AccordionTrigger>
               <AccordionContent className="px-4 space-y-4">
+                 <div>
+                    <Label>Preset Size</Label>
+                    <Select onValueChange={handlePresetChange}>
+                      <SelectTrigger className="w-full mt-2">
+                        <SelectValue placeholder="Select a preset size..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                         <SelectGroup>
+                          <SelectLabel>Page Sizes</SelectLabel>
+                          {predefinedSizes.filter(s => s.category === 'Page').map(size => (
+                            <SelectItem key={size.name} value={`${size.width}x${size.height}`}>
+                              {size.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                        <SelectGroup>
+                          <SelectLabel>Label Sizes</SelectLabel>
+                           {predefinedSizes.filter(s => s.category === 'Label').map(size => (
+                            <SelectItem key={size.name} value={`${size.width}x${size.height}`}>
+                              {size.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                         <SelectGroup>
+                          <SelectLabel>Cards</SelectLabel>
+                           {predefinedSizes.filter(s => s.category === 'Card').map(size => (
+                            <SelectItem key={size.name} value={`${size.width}x${size.height}`}>
+                              {size.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                </div>
                 <div>
-                  <Label>Canvas Size (px)</Label>
+                  <Label>Custom Size (px)</Label>
                   <div className="flex gap-2 mt-2">
-                    <Input placeholder="Width" type="number" defaultValue={canvas?.getWidth()} onBlur={(e) => setCanvasSize(parseInt(e.target.value), canvas?.getHeight() || 600)} />
-                    <Input placeholder="Height" type="number" defaultValue={canvas?.getHeight()} onBlur={(e) => setCanvasSize(canvas?.getWidth() || 800, parseInt(e.target.value))} />
+                    <Input 
+                      placeholder="Width" 
+                      type="number" 
+                      value={canvas?.getWidth() || 0} 
+                      onChange={(e) => setCanvasSize(parseInt(e.target.value), canvas?.getHeight() || 600)} 
+                    />
+                    <Input 
+                      placeholder="Height" 
+                      type="number" 
+                      value={canvas?.getHeight() || 0} 
+                      onChange={(e) => setCanvasSize(canvas?.getWidth() || 800, parseInt(e.target.value))} 
+                    />
                   </div>
                 </div>
                 <div>
                   <Label>Background Color</Label>
-                  <Input type="color" defaultValue={canvas?.backgroundColor as string} onChange={(e) => setCanvasBackgroundColor(e.target.value)} className="p-1" />
+                  <Input 
+                    type="color" 
+                    value={canvas?.backgroundColor as string || '#ffffff'} 
+                    onChange={(e) => setCanvasBackgroundColor(e.target.value)} 
+                    className="p-1 mt-2" 
+                  />
                 </div>
                 <div>
                   <Label>Background Image</Label>
@@ -98,10 +164,11 @@ export function RightSidebar() {
                       onChange={(e) => setBgImageUrl(e.target.value)}
                       onBlur={(e) => setCanvasBackgroundImage(e.target.value)}
                     />
-                    <Button variant="outline" size="icon" onClick={triggerFileUpload}>
-                        <Upload />
-                    </Button>
-                    <input
+                     <Button variant="outline" size="icon" onClick={triggerFileUpload}>
+                        <ImageUp className="h-4 w-4" />
+                        <span className="sr-only">Upload Image</span>
+                     </Button>
+                     <input
                       type="file"
                       ref={fileInputRef}
                       className="hidden"
