@@ -15,11 +15,9 @@ export function MainLayout() {
         <div className="flex flex-1 overflow-hidden">
           <SidebarProvider>
             <LeftSidebar />
-          </SidebarProvider>
-          <main className="flex-1 flex flex-col overflow-auto">
-            <EditorWorkspace />
-          </main>
-          <SidebarProvider>
+            <main className="flex-1 flex flex-col overflow-auto">
+              <EditorWorkspace />
+            </main>
             <RightSidebar />
           </SidebarProvider>
         </div>
