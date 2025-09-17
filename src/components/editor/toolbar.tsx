@@ -35,7 +35,14 @@ import { useEditor } from "../editor-provider";
 
 
 export function Toolbar() {
-  const { addObject } = useEditor();
+  const { 
+    addObject, 
+    saveAsJson, 
+    loadFromJson,
+    exportAsPng,
+    exportAsJpg,
+    exportAsPdf
+  } = useEditor();
 
   return (
     <div className="bg-background rounded-lg border shadow-sm p-2 flex items-center gap-2 flex-wrap">
@@ -80,12 +87,12 @@ export function Toolbar() {
           <Button variant="ghost"><FileDown className="mr-2" /> File</Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuItem>Save Template</DropdownMenuItem>
-          <DropdownMenuItem>Load Template</DropdownMenuItem>
+          <DropdownMenuItem onClick={saveAsJson}>Save Template</DropdownMenuItem>
+          <DropdownMenuItem onClick={loadFromJson}>Load Template</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Export as PNG</DropdownMenuItem>
-          <DropdownMenuItem>Export as JPG</DropdownMenuItem>
-          <DropdownMenuItem>Export as PDF</DropdownMenuItem>
+          <DropdownMenuItem onClick={exportAsPng}>Export as PNG</DropdownMenuItem>
+          <DropdownMenuItem onClick={exportAsJpg}>Export as JPG</DropdownMenuItem>
+          <DropdownMenuItem onClick={exportAsPdf}>Export as PDF</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 

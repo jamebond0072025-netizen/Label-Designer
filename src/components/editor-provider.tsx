@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useCallback, ReactNode, useEffect 
 import type { fabric as FabricType } from 'fabric';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/hooks/use-toast';
-
+import jsPDF from 'jspdf';
 
 interface EditorContextType {
   canvas: FabricType.Canvas | null;
@@ -13,6 +13,11 @@ interface EditorContextType {
   addObject: (type: 'rect' | 'circle' | 'textbox' | 'image' | 'barcode') => void;
   updateObject: (id: string, properties: any) => void;
   fabric: typeof FabricType | null;
+  saveAsJson: () => void;
+  loadFromJson: () => void;
+  exportAsPng: () => void;
+  exportAsJpg: () => void;
+  exportAsPdf: () => void;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -24,9 +29,12 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    import('fabric').then((fabricModule) => {
-      setFabric(fabricModule.fabric);
-    });
+    // Dynamically import fabric on the client side only
+    if (typeof window !== 'undefined') {
+      import('fabric').then((fabricModule) => {
+        setFabric(fabricModule.fabric);
+      });
+    }
   }, []);
 
   const initCanvas = useCallback((canvasInstance: FabricType.Canvas) => {
@@ -73,6 +81,15 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         obj = new fabric.Textbox('New Text', { ...commonProps, left: 50, top: 50, width: 150, fontSize: 20 });
         break;
       case 'image':
+        // Add a placeholder image
+        fabric.Image.fromURL('https://picsum.photos/seed/product/400/300', (img) => {
+            img.set({ ...commonProps, left: 50, top: 50 });
+            img.scaleToWidth(200);
+            canvas.add(img);
+            canvas.setActiveObject(img);
+            canvas.renderAll();
+        });
+        return;
       case 'barcode':
         toast({
             title: "Coming Soon!",
@@ -97,11 +114,11 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       obj.set(properties);
       
       // Manually adjust width/height for scaling if that's what's being set
-      if (properties.width !== undefined) {
-          obj.scaleX = properties.width / (obj.width ?? 1);
+      if (properties.width !== undefined && obj.width) {
+          obj.scaleX = properties.width / obj.width;
       }
-      if (properties.height !== undefined) {
-          obj.scaleY = properties.height / (obj.height ?? 1);
+      if (properties.height !== undefined && obj.height) {
+          obj.scaleY = properties.height / obj.height;
       }
 
       canvas.renderAll();
@@ -111,6 +128,73 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [canvas, activeObject]);
 
+  const saveAsJson = useCallback(() => {
+    if (!canvas) return;
+    const json = JSON.stringify(canvas.toJSON(['name']));
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'label-template.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "Template Saved!" });
+  }, [canvas, toast]);
+
+  const loadFromJson = useCallback(() => {
+    if (!canvas) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const json = event.target?.result as string;
+        canvas.loadFromJSON(json, () => {
+          canvas.renderAll();
+          toast({ title: "Template Loaded!" });
+        });
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }, [canvas, toast]);
+
+  const exportCanvas = (format: 'png' | 'jpeg' | 'pdf') => {
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL({
+      format: format === 'pdf' ? 'png' : format,
+      quality: 1,
+      multiplier: 2 // for better quality
+    });
+
+    if (format === 'pdf') {
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? 'l' : 'p',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      });
+      pdf.addImage(dataUrl, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save('label-design.pdf');
+    } else {
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `label-design.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+    toast({ title: `Exported as ${format.toUpperCase()}!` });
+  };
+
+  const exportAsPng = () => exportCanvas('png');
+  const exportAsJpg = () => exportCanvas('jpeg');
+  const exportAsPdf = () => exportCanvas('pdf');
+
   const value = {
     canvas,
     activeObject,
@@ -118,6 +202,11 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     addObject,
     updateObject,
     fabric,
+    saveAsJson,
+    loadFromJson,
+    exportAsPng,
+    exportAsJpg,
+    exportAsPdf,
   };
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
