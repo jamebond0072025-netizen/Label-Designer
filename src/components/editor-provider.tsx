@@ -587,6 +587,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     for (let i = 0; i < dataArray.length; i++) {
         const data = dataArray[i];
         
+        if (i > 0 && i % labelsPerPage === 0) {
+            pdf.addPage();
+        }
+        
         // Load the template
         await new Promise<void>(resolve => tempCanvas.loadFromJSON(originalJson, () => resolve()));
         
@@ -596,11 +600,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         // Add to PDF
         const dataUrl = tempCanvas.toDataURL({ format: 'png', quality: 1, multiplier: 2 });
         
-        const pageIndex = Math.floor(i / labelsPerPage);
-        if (i > 0 && i % labelsPerPage === 0) {
-            pdf.addPage();
-        }
-
         const indexOnPage = i % labelsPerPage;
         const row = Math.floor(indexOnPage / labelsPerRow);
         const col = indexOnPage % labelsPerRow;
