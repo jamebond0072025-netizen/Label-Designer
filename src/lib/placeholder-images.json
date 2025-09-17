@@ -1,3 +1,16 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "product-image",
+      "description": "A placeholder for a product image on a label.",
+      "imageUrl": "https://picsum.photos/seed/product/400/300",
+      "imageHint": "product photo"
+    },
+    {
+      "id": "logo-placeholder",
+      "description": "A placeholder for a company logo.",
+      "imageUrl": "https://picsum.photos/seed/logo/200/200",
+      "imageHint": "company logo"
+    }
+  ]
 }
