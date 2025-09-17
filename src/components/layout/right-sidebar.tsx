@@ -32,6 +32,7 @@ import { Sparkles, PanelRight, ImageUp } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { useEditor } from '../editor-provider';
 import { predefinedSizes } from '@/lib/predefined-sizes';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const DPI = 96;
 const MM_TO_IN = 0.0393701;
@@ -142,9 +143,18 @@ export function RightSidebar() {
   return (
     <Sidebar side="right">
       <SidebarHeader>
-        <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-          <PanelRight />
-        </Button>
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+                      <PanelRight />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                    <p>Toggle Properties Panel</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
       </SidebarHeader>
       <SidebarContent className="p-0">
         {state === 'expanded' && (
@@ -156,7 +166,7 @@ export function RightSidebar() {
             <AccordionItem value="properties">
               <AccordionTrigger className="px-4">Properties</AccordionTrigger>
               <AccordionContent className="px-4">
-                <PropertiesPanel key={activeObject?.name} />
+                <PropertiesPanel key={activeObject?.id} />
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="canvas">
@@ -274,14 +284,23 @@ export function RightSidebar() {
                       onChange={(e) => setBgImageUrl(e.target.value)}
                       onBlur={(e) => setCanvasBackgroundImage(e.target.value)}
                     />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={triggerFileUpload}
-                    >
-                      <ImageUp className="h-4 w-4" />
-                      <span className="sr-only">Upload Image</span>
-                    </Button>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={triggerFileUpload}
+                                >
+                                  <ImageUp className="h-4 w-4" />
+                                  <span className="sr-only">Upload Image</span>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Upload from device</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                     <input
                       type="file"
                       ref={fileInputRef}
@@ -320,10 +339,19 @@ export function RightSidebar() {
             <AccordionItem value="ai">
               <AccordionTrigger className="px-4">AI Suggestions</AccordionTrigger>
               <AccordionContent className="px-4 space-y-4">
-                <Button className="w-full">
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Get AI Suggestions
-                </Button>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button className="w-full">
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                Get AI Suggestions
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Get AI-powered design feedback</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
                 <Alert>
                   <AlertTitle>Design Tip</AlertTitle>
                   <AlertDescription>
@@ -339,5 +367,3 @@ export function RightSidebar() {
     </Sidebar>
   );
 }
-
-    

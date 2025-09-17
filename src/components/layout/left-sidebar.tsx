@@ -17,6 +17,7 @@ import { Button } from "../ui/button";
 import { Eye, Lock, ChevronUp, ChevronDown, Unlock, PanelLeft, EyeOff } from "lucide-react";
 import { useEditor } from "../editor-provider";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 export function LeftSidebar() {
   const { toggleSidebar, state } = useSidebar();
@@ -36,9 +37,18 @@ export function LeftSidebar() {
   return (
     <Sidebar>
        <SidebarHeader>
-        <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-           <PanelLeft />
-        </Button>
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+                       <PanelLeft />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                    <p>Toggle Layers Panel</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
       </SidebarHeader>
       <SidebarContent>
         {state === 'expanded' && (
@@ -47,6 +57,7 @@ export function LeftSidebar() {
                 <AccordionTrigger className="px-4">Layers Panel</AccordionTrigger>
                 <AccordionContent className="px-2">
                 <ul className="space-y-1 p-2">
+                    <TooltipProvider>
                     {reversedLayers.map((layer, index) => {
                       const isLocked = !!layer.lockMovementX; // Check one lock property as a proxy
                       return (
@@ -60,34 +71,55 @@ export function LeftSidebar() {
                          >
                             <span className="truncate">{layer.name || `Untitled ${layer.type}`}</span>
                             <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); toggleVisibility(layer.id!); }}>
-                                {layer.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); toggleLock(layer.id!); }}>
-                                {isLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                            </Button>
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-6 w-6"
-                                onClick={(e) => { e.stopPropagation(); bringForward(layer.id!); }}
-                                disabled={index === 0}
-                            >
-                                <ChevronUp className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-6 w-6"
-                                onClick={(e) => { e.stopPropagation(); sendBackwards(layer.id!); }}
-                                disabled={index === reversedLayers.length - 1}
-                            >
-                                <ChevronDown className="h-4 w-4" />
-                            </Button>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); toggleVisibility(layer.id!); }}>
+                                        {layer.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top"><p>{layer.visible ? 'Hide' : 'Show'}</p></TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); toggleLock(layer.id!); }}>
+                                        {isLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top"><p>{isLocked ? 'Unlock' : 'Lock'}</p></TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-6 w-6"
+                                        onClick={(e) => { e.stopPropagation(); bringForward(layer.id!); }}
+                                        disabled={index === 0}
+                                    >
+                                        <ChevronUp className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top"><p>Bring Forward</p></TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                     <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-6 w-6"
+                                        onClick={(e) => { e.stopPropagation(); sendBackwards(layer.id!); }}
+                                        disabled={index === reversedLayers.length - 1}
+                                    >
+                                        <ChevronDown className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top"><p>Send Backward</p></TooltipContent>
+                            </Tooltip>
                             </div>
                         </li>
                       );
                     })}
+                    </TooltipProvider>
                 </ul>
                 </AccordionContent>
             </AccordionItem>
