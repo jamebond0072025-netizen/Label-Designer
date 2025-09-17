@@ -548,10 +548,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "Generating PDF...", description: `Processing ${dataArray.length} labels.` });
 
     const originalJson = canvas.toJSON(CUSTOM_PROPS);
-    const labelWidth = canvas.getWidth();
-    const labelHeight = canvas.getHeight();
+    const initialLabelWidth = canvas.getWidth();
+    const initialLabelHeight = canvas.getHeight();
     
-    if (labelWidth <= 0 || labelHeight <= 0) {
+    if (initialLabelWidth <= 0 || initialLabelHeight <= 0) {
         toast({ title: "Invalid Label Size", description: "Cannot export with zero width or height.", variant: "destructive" });
         return;
     }
@@ -560,6 +560,19 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const A4_WIDTH = 794;
     const A4_HEIGHT = 1122;
     const MARGIN = 20; // 20px margin
+    const pageContentWidth = A4_WIDTH - MARGIN * 2;
+    const pageContentHeight = A4_HEIGHT - MARGIN * 2;
+    
+    let scale = 1;
+    if (initialLabelWidth > pageContentWidth) {
+        scale = pageContentWidth / initialLabelWidth;
+    }
+    if (initialLabelHeight * scale > pageContentHeight) {
+        scale = pageContentHeight / initialLabelHeight;
+    }
+    
+    const labelWidth = initialLabelWidth * scale;
+    const labelHeight = initialLabelHeight * scale;
 
     const pdf = new jsPDF({
         orientation: 'p',
@@ -567,11 +580,11 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         format: 'a4'
     });
     
-    const labelsPerRow = Math.floor((A4_WIDTH - MARGIN * 2) / labelWidth);
-    const labelsPerCol = Math.floor((A4_HEIGHT - MARGIN * 2) / labelHeight);
+    const labelsPerRow = Math.floor(pageContentWidth / labelWidth);
+    const labelsPerCol = Math.floor(pageContentHeight / labelHeight);
     
     if (labelsPerRow === 0 || labelsPerCol === 0) {
-        toast({ title: "Label Too Large", description: "The label is too large to fit on an A4 page.", variant: "destructive" });
+        toast({ title: "Label Too Large", description: "The label is too large to fit on an A4 page even after scaling.", variant: "destructive" });
         return;
     }
     const labelsPerPage = labelsPerRow * labelsPerCol;
@@ -579,8 +592,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     // Create a temporary canvas to do the rendering
     const tempCanvasEl = document.createElement('canvas');
     const tempCanvas = new fabric.Canvas(tempCanvasEl, {
-        width: labelWidth,
-        height: labelHeight,
+        width: initialLabelWidth,
+        height: initialLabelHeight,
     });
     
     let labelCount = 0;
