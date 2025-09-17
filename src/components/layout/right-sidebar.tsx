@@ -1,24 +1,24 @@
 
-"use client";
+'use client';
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from 'react';
 import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
   useSidebar,
-} from "@/components/ui/sidebar";
+} from '@/components/ui/sidebar';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
-import { PropertiesPanel } from "../editor/properties-panel";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { Textarea } from "../ui/textarea";
+} from '@/components/ui/accordion';
+import { PropertiesPanel } from '../editor/properties-panel';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Textarea } from '../ui/textarea';
 import {
   Select,
   SelectContent,
@@ -27,11 +27,14 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Sparkles, PanelRight, Upload, FileUp, ImageUp } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { useEditor } from "../editor-provider";
-import { predefinedSizes } from "@/lib/predefined-sizes";
+} from '@/components/ui/select';
+import { Sparkles, PanelRight, ImageUp } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { useEditor } from '../editor-provider';
+import { predefinedSizes } from '@/lib/predefined-sizes';
+
+const DPI = 96;
+const MM_TO_IN = 0.0393701;
 
 export function RightSidebar() {
   const {
@@ -43,9 +46,34 @@ export function RightSidebar() {
     setCanvasBackgroundImage,
   } = useEditor();
   const { toggleSidebar, state } = useSidebar();
-  const [jsonData, setJsonData] = useState('{\n  "text-1": "New Value",\n  "image-1": "https://picsum.photos/seed/new/400/300"\n}');
-  const [bgImageUrl, setBgImageUrl] = useState("");
+  const [jsonData, setJsonData] = useState(
+    '{\n  "text-1": "New Value",\n  "image-1": "https://picsum.photos/seed/new/400/300"\n}'
+  );
+  const [bgImageUrl, setBgImageUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [selectedPreset, setSelectedPreset] = useState('custom');
+  const [customWidth, setCustomWidth] = useState(canvas?.getWidth() || 800);
+  const [customHeight, setCustomHeight] = useState(canvas?.getHeight() || 600);
+  const [unit, setUnit] = useState<'px' | 'in' | 'mm'>('px');
+
+  useEffect(() => {
+    if (canvas) {
+        const pxWidth = canvas.getWidth();
+        const pxHeight = canvas.getHeight();
+        if (unit === 'in') {
+            setCustomWidth(pxWidth / DPI);
+            setCustomHeight(pxHeight / DPI);
+        } else if (unit === 'mm') {
+            setCustomWidth((pxWidth / DPI) / MM_TO_IN);
+            setCustomHeight((pxHeight / DPI) / MM_TO_IN);
+        } else {
+            setCustomWidth(pxWidth);
+            setCustomHeight(pxHeight);
+        }
+    }
+  }, [canvas, unit]);
+
 
   const handleApplyJson = () => {
     applyJsonData(jsonData);
@@ -69,10 +97,46 @@ export function RightSidebar() {
   };
 
   const handlePresetChange = (value: string) => {
-    const [width, height] = value.split('x').map(Number);
-    if (!isNaN(width) && !isNaN(height)) {
+    setSelectedPreset(value);
+    if (value !== 'custom') {
+      const [width, height] = value.split('x').map(Number);
+      if (!isNaN(width) && !isNaN(height)) {
         setCanvasSize(width, height);
+      }
     }
+  };
+
+  const handleApplyCustomSize = () => {
+    let widthInPx = customWidth;
+    let heightInPx = customHeight;
+
+    if (unit === 'in') {
+      widthInPx = customWidth * DPI;
+      heightInPx = customHeight * DPI;
+    } else if (unit === 'mm') {
+      widthInPx = customWidth * MM_TO_IN * DPI;
+      heightInPx = customHeight * MM_TO_IN * DPI;
+    }
+    
+    setCanvasSize(Math.round(widthInPx), Math.round(heightInPx));
+  };
+  
+  const handleUnitChange = (newUnit: 'px' | 'in' | 'mm') => {
+      if (!canvas) return;
+      const pxWidth = canvas.getWidth();
+      const pxHeight = canvas.getHeight();
+
+      if (newUnit === 'in') {
+          setCustomWidth(pxWidth / DPI);
+          setCustomHeight(pxHeight / DPI);
+      } else if (newUnit === 'mm') {
+          setCustomWidth((pxWidth / DPI) / MM_TO_IN);
+          setCustomHeight((pxHeight / DPI) / MM_TO_IN);
+      } else {
+          setCustomWidth(pxWidth);
+          setCustomHeight(pxHeight);
+      }
+      setUnit(newUnit);
   };
 
   return (
@@ -83,8 +147,12 @@ export function RightSidebar() {
         </Button>
       </SidebarHeader>
       <SidebarContent className="p-0">
-        {state === "expanded" && (
-          <Accordion type="multiple" defaultValue={["properties"]} className="w-full">
+        {state === 'expanded' && (
+          <Accordion
+            type="multiple"
+            defaultValue={['properties']}
+            className="w-full"
+          >
             <AccordionItem value="properties">
               <AccordionTrigger className="px-4">Properties</AccordionTrigger>
               <AccordionContent className="px-4">
@@ -94,69 +162,111 @@ export function RightSidebar() {
             <AccordionItem value="canvas">
               <AccordionTrigger className="px-4">Canvas</AccordionTrigger>
               <AccordionContent className="px-4 space-y-4">
-                 <div>
-                    <Label>Preset Size</Label>
-                    <Select onValueChange={handlePresetChange}>
-                      <SelectTrigger className="w-full mt-2">
-                        <SelectValue placeholder="Select a preset size..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                         <SelectGroup>
-                          <SelectLabel>Page Sizes</SelectLabel>
-                          {predefinedSizes.filter(s => s.category === 'Page').map(size => (
-                            <SelectItem key={size.name} value={`${size.width}x${size.height}`}>
-                              {size.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                        <SelectGroup>
-                          <SelectLabel>Label Sizes</SelectLabel>
-                           {predefinedSizes.filter(s => s.category === 'Label').map(size => (
-                            <SelectItem key={size.name} value={`${size.width}x${size.height}`}>
-                              {size.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                         <SelectGroup>
-                          <SelectLabel>Cards</SelectLabel>
-                           {predefinedSizes.filter(s => s.category === 'Card').map(size => (
-                            <SelectItem key={size.name} value={`${size.width}x${size.height}`}>
-                              {size.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                </div>
                 <div>
-                  <Label>Custom Size (px)</Label>
-                  <div className="flex gap-2 mt-2">
-                    <Input 
-                      placeholder="Width" 
-                      type="number" 
-                      value={canvas?.getWidth() || 0} 
-                      onChange={(e) => setCanvasSize(parseInt(e.target.value), canvas?.getHeight() || 600)} 
-                    />
-                    <Input 
-                      placeholder="Height" 
-                      type="number" 
-                      value={canvas?.getHeight() || 0} 
-                      onChange={(e) => setCanvasSize(canvas?.getWidth() || 800, parseInt(e.target.value))} 
-                    />
-                  </div>
+                  <Label>Size</Label>
+                  <Select
+                    onValueChange={handlePresetChange}
+                    value={selectedPreset}
+                  >
+                    <SelectTrigger className="w-full mt-2">
+                      <SelectValue placeholder="Select a preset size..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="custom">Custom</SelectItem>
+                      <SelectGroup>
+                        <SelectLabel>Page Sizes</SelectLabel>
+                        {predefinedSizes
+                          .filter((s) => s.category === 'Page')
+                          .map((size) => (
+                            <SelectItem
+                              key={size.name}
+                              value={`${size.width}x${size.height}`}
+                            >
+                              {size.name}
+                            </SelectItem>
+                          ))}
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Label Sizes</SelectLabel>
+                        {predefinedSizes
+                          .filter((s) => s.category === 'Label')
+                          .map((size) => (
+                            <SelectItem
+                              key={size.name}
+                              value={`${size.width}x${size.height}`}
+                            >
+                              {size.name}
+                            </SelectItem>
+                          ))}
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Cards</SelectLabel>
+                        {predefinedSizes
+                          .filter((s) => s.category === 'Card')
+                          .map((size) => (
+                            <SelectItem
+                              key={size.name}
+                              value={`${size.width}x${size.height}`}
+                            >
+                              {size.name}
+                            </SelectItem>
+                          ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {selectedPreset === 'custom' && (
+                  <div className="p-4 border rounded-md space-y-4">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label>Width</Label>
+                        <Input
+                          placeholder="Width"
+                          type="number"
+                          value={Math.round(customWidth * 100) / 100}
+                          onChange={(e) => setCustomWidth(parseFloat(e.target.value))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Height</Label>
+                        <Input
+                          placeholder="Height"
+                          type="number"
+                          value={Math.round(customHeight * 100) / 100}
+                          onChange={(e) => setCustomHeight(parseFloat(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                     <div>
+                        <Label>Unit</Label>
+                        <Select onValueChange={handleUnitChange} value={unit}>
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="px">Pixels (px)</SelectItem>
+                                <SelectItem value="in">Inches (in)</SelectItem>
+                                <SelectItem value="mm">Millimeters (mm)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <Button className="w-full" onClick={handleApplyCustomSize}>Apply</Button>
+                  </div>
+                )}
+                
                 <div>
                   <Label>Background Color</Label>
-                  <Input 
-                    type="color" 
-                    value={canvas?.backgroundColor as string || '#ffffff'} 
-                    onChange={(e) => setCanvasBackgroundColor(e.target.value)} 
-                    className="p-1 mt-2" 
+                  <Input
+                    type="color"
+                    value={(canvas?.backgroundColor as string) || '#ffffff'}
+                    onChange={(e) => setCanvasBackgroundColor(e.target.value)}
+                    className="p-1 mt-2"
                   />
                 </div>
                 <div>
                   <Label>Background Image</Label>
-                   <div className="flex gap-2 mt-2">
+                  <div className="flex gap-2 mt-2">
                     <Input
                       type="text"
                       placeholder="Paste image URL"
@@ -164,18 +274,22 @@ export function RightSidebar() {
                       onChange={(e) => setBgImageUrl(e.target.value)}
                       onBlur={(e) => setCanvasBackgroundImage(e.target.value)}
                     />
-                     <Button variant="outline" size="icon" onClick={triggerFileUpload}>
-                        <ImageUp className="h-4 w-4" />
-                        <span className="sr-only">Upload Image</span>
-                     </Button>
-                     <input
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={triggerFileUpload}
+                    >
+                      <ImageUp className="h-4 w-4" />
+                      <span className="sr-only">Upload Image</span>
+                    </Button>
+                    <input
                       type="file"
                       ref={fileInputRef}
                       className="hidden"
                       accept="image/*"
                       onChange={handleBgImageUpload}
                     />
-                   </div>
+                  </div>
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -192,9 +306,13 @@ export function RightSidebar() {
                     value={jsonData}
                     onChange={(e) => setJsonData(e.target.value)}
                   />
-                  <Button className="mt-2 w-full" onClick={handleApplyJson}>Apply Data</Button>
+                  <Button className="mt-2 w-full" onClick={handleApplyJson}>
+                    Apply Data
+                  </Button>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Use the unique key of an element to update its content. For text, provide a string. For images or barcodes, provide a URL or new value.
+                    Use the unique key of an element to update its content. For
+                    text, provide a string. For images or barcodes, provide a
+                    URL or new value.
                   </p>
                 </div>
               </AccordionContent>
@@ -209,7 +327,8 @@ export function RightSidebar() {
                 <Alert>
                   <AlertTitle>Design Tip</AlertTitle>
                   <AlertDescription>
-                    Consider increasing the font size of the product name for better readability from a distance.
+                    Consider increasing the font size of the product name for
+                    better readability from a distance.
                   </AlertDescription>
                 </Alert>
               </AccordionContent>
@@ -220,3 +339,5 @@ export function RightSidebar() {
     </Sidebar>
   );
 }
+
+    
