@@ -20,7 +20,7 @@ export function EditorWorkspace() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (canvas) {
+    if (canvas && containerRef.current) {
       fitToScreen();
       
       const handleResize = () => fitToScreen();
@@ -35,8 +35,8 @@ export function EditorWorkspace() {
   return (
     <div className="flex flex-col h-full bg-muted/50 p-4 gap-4 overflow-hidden">
       <Toolbar />
-      <div ref={containerRef} className="flex-1 flex items-center justify-center relative">
-        <Card className="shadow-inner absolute">
+      <div className="flex-1 flex items-center justify-center relative">
+        <Card ref={containerRef} className="shadow-inner w-full h-full overflow-hidden">
             <FabricCanvas />
         </Card>
       </div>
