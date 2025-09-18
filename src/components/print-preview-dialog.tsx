@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useEditor } from './editor-provider';
 import { Slider } from './ui/slider';
-import { FileDown, ZoomIn } from 'lucide-react';
+import { FileDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from './ui/separator';
 
@@ -50,13 +50,18 @@ export function PrintPreviewDialog({ isOpen, onClose }: PrintPreviewDialogProps)
     spacingVertical: 10,
     scale: 100, // as percentage
   });
+  const [labelPreviewUrl, setLabelPreviewUrl] = useState('');
   
   const initialLabelWidth = useMemo(() => canvas?.getWidth() || 0, [canvas]);
   const initialLabelHeight = useMemo(() => canvas?.getHeight() || 0, [canvas]);
 
-  // Set initial scale if label is too large
+  // Set initial scale if label is too large & generate preview image
   useEffect(() => {
     if (!isOpen || !canvas) return;
+
+    // Generate preview
+    const dataUrl = canvas.toDataURL({ format: 'png', quality: 0.8, multiplier: 1 });
+    setLabelPreviewUrl(dataUrl);
 
     const pageContentWidth = A4_WIDTH_PX - settings.marginLeft - settings.marginRight;
     const pageContentHeight = A4_HEIGHT_PX - settings.marginTop - settings.marginBottom;
@@ -200,7 +205,7 @@ export function PrintPreviewDialog({ isOpen, onClose }: PrintPreviewDialogProps)
                         return (
                             <div 
                                 key={i}
-                                className="absolute bg-gray-200 border border-gray-400 flex items-center justify-center text-xs text-gray-500"
+                                className="absolute border border-gray-300 overflow-hidden"
                                 style={{
                                     left: `${x}px`,
                                     top: `${y}px`,
@@ -208,7 +213,9 @@ export function PrintPreviewDialog({ isOpen, onClose }: PrintPreviewDialogProps)
                                     height: `${labelHeight}px`,
                                 }}
                             >
-                                Label {i + 1}
+                               {labelPreviewUrl && (
+                                 <img src={labelPreviewUrl} alt="Label Preview" className="w-full h-full" />
+                               )}
                             </div>
                         )
                     })}
