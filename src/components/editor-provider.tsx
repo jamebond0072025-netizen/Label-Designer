@@ -34,7 +34,7 @@ interface EditorContextType {
   exportAsPng: () => void;
   exportAsJpg: () => void;
   exportAsPdf: () => void;
-  exportBulkPdf: (jsonData: string, settings: PrintSettings) => void;
+  exportBulkPdf: (jsonData: string, settings: Omit<PrintSettings, 'scale'> & { scale: number }) => void;
   applyJsonData: (jsonData: string) => void;
   bringForward: () => void;
   sendBackwards: () => void;
@@ -654,7 +654,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [canvas, updateCanvasObjects, toast, saveHistory]);
 
-  const exportBulkPdf = useCallback(async (jsonData: string, settings: PrintSettings) => {
+  const exportBulkPdf = useCallback(async (jsonData: string, settings: Omit<PrintSettings, 'scale'> & { scale: number }) => {
     if (!canvas || !fabric) return;
     setPrintPreviewOpen(false);
 
@@ -687,21 +687,19 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const pageContentWidth = A4_WIDTH - settings.marginLeft - settings.marginRight;
     const pageContentHeight = A4_HEIGHT - settings.marginTop - settings.marginBottom;
     
-    let scale = 1;
-    if (initialLabelWidth > pageContentWidth || initialLabelHeight > pageContentHeight) {
-        const scaleX = pageContentWidth / initialLabelWidth;
-        const scaleY = pageContentHeight / initialLabelHeight;
-        scale = Math.min(scaleX, scaleY, 1);
-    }
-    
-    const labelWidth = initialLabelWidth * scale;
-    const labelHeight = initialLabelHeight * scale;
+    const labelWidth = initialLabelWidth * settings.scale;
+    const labelHeight = initialLabelHeight * settings.scale;
 
     const pdf = new jsPDF({
         orientation: 'p',
         unit: 'px',
         format: 'a4'
     });
+    
+    if (labelWidth <= 0 || labelHeight <= 0) {
+        toast({ title: "Invalid Scaled Label Size", description: "Label dimensions after scaling are invalid.", variant: "destructive" });
+        return;
+    }
     
     const labelsPerRow = Math.floor((pageContentWidth + settings.spacingHorizontal) / (labelWidth + settings.spacingHorizontal));
     const labelsPerCol = Math.floor((pageContentHeight + settings.spacingVertical) / (labelHeight + settings.spacingVertical));

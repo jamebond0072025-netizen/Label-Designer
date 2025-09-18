@@ -12,12 +12,12 @@ import {
   DialogClose
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useEditor } from './editor-provider';
 import { Slider } from './ui/slider';
-import { FileDown } from 'lucide-react';
+import { FileDown, ZoomIn } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from './ui/separator';
 
 export interface PrintSettings {
   marginTop: number;
@@ -26,6 +26,7 @@ export interface PrintSettings {
   marginRight: number;
   spacingHorizontal: number;
   spacingVertical: number;
+  scale: number;
 }
 
 interface PrintPreviewDialogProps {
@@ -47,37 +48,55 @@ export function PrintPreviewDialog({ isOpen, onClose }: PrintPreviewDialogProps)
     marginRight: 20,
     spacingHorizontal: 10,
     spacingVertical: 10,
+    scale: 100, // as percentage
   });
+  
+  const initialLabelWidth = useMemo(() => canvas?.getWidth() || 0, [canvas]);
+  const initialLabelHeight = useMemo(() => canvas?.getHeight() || 0, [canvas]);
 
-  const { labelsPerRow, labelsPerCol, labelWidth, labelHeight } = useMemo(() => {
-    if (!canvas) return { labelsPerRow: 0, labelsPerCol: 0, labelWidth: 0, labelHeight: 0 };
-
-    const initialLabelWidth = canvas.getWidth();
-    const initialLabelHeight = canvas.getHeight();
+  // Set initial scale if label is too large
+  useEffect(() => {
+    if (!isOpen || !canvas) return;
 
     const pageContentWidth = A4_WIDTH_PX - settings.marginLeft - settings.marginRight;
     const pageContentHeight = A4_HEIGHT_PX - settings.marginTop - settings.marginBottom;
 
-    let scale = 1;
+    let autoScale = 1;
     if (initialLabelWidth > pageContentWidth || initialLabelHeight > pageContentHeight) {
         const scaleX = pageContentWidth / initialLabelWidth;
         const scaleY = pageContentHeight / initialLabelHeight;
-        scale = Math.min(scaleX, scaleY, 1);
+        autoScale = Math.min(scaleX, scaleY);
     }
     
-    const scaledLabelWidth = initialLabelWidth * scale;
-    const scaledLabelHeight = initialLabelHeight * scale;
+    setSettings(s => ({ ...s, scale: Math.floor(autoScale * 100) }));
+    
+  }, [isOpen, canvas, initialLabelWidth, initialLabelHeight, settings.marginLeft, settings.marginRight, settings.marginTop, settings.marginBottom]);
 
-    const numRows = scaledLabelWidth > 0 ? Math.floor((pageContentWidth + settings.spacingHorizontal) / (scaledLabelWidth + settings.spacingHorizontal)) : 0;
-    const numCols = scaledLabelHeight > 0 ? Math.floor((pageContentHeight + settings.spacingVertical) / (scaledLabelHeight + settings.spacingVertical)) : 0;
+
+  const { labelsPerRow, labelsPerCol, labelWidth, labelHeight } = useMemo(() => {
+    if (!canvas) return { labelsPerRow: 0, labelsPerCol: 0, labelWidth: 0, labelHeight: 0 };
+
+    const pageContentWidth = A4_WIDTH_PX - settings.marginLeft - settings.marginRight;
+    const pageContentHeight = A4_HEIGHT_PX - settings.marginTop - settings.marginBottom;
+
+    const scaleFactor = settings.scale / 100;
+    const scaledLabelWidth = initialLabelWidth * scaleFactor;
+    const scaledLabelHeight = initialLabelHeight * scaleFactor;
+    
+    if (scaledLabelWidth <= 0 || scaledLabelHeight <= 0) {
+        return { labelsPerRow: 0, labelsPerCol: 0, labelWidth: 0, labelHeight: 0 };
+    }
+
+    const numRows = Math.floor((pageContentHeight + settings.spacingVertical) / (scaledLabelHeight + settings.spacingVertical));
+    const numCols = Math.floor((pageContentWidth + settings.spacingHorizontal) / (scaledLabelWidth + settings.spacingHorizontal));
     
     return {
-      labelsPerRow: numRows,
-      labelsPerCol: numCols,
+      labelsPerCol: numRows,
+      labelsPerRow: numCols,
       labelWidth: scaledLabelWidth,
       labelHeight: scaledLabelHeight,
     };
-  }, [canvas, settings]);
+  }, [canvas, settings, initialLabelWidth, initialLabelHeight]);
 
   const handleGenerateClick = () => {
     try {
@@ -86,7 +105,8 @@ export function PrintPreviewDialog({ isOpen, onClose }: PrintPreviewDialogProps)
             toast({ title: "Invalid Data", description: "Bulk data must be a JSON array.", variant: "destructive" });
             return;
         }
-        exportBulkPdf(bulkJsonData, settings);
+        // Pass scale as a decimal (e.g., 100% -> 1.0)
+        exportBulkPdf(bulkJsonData, { ...settings, scale: settings.scale / 100 });
     } catch (e) {
         toast({ title: "Invalid JSON", description: "Could not parse bulk data. Please check the format.", variant: "destructive" });
     }
@@ -104,7 +124,7 @@ export function PrintPreviewDialog({ isOpen, onClose }: PrintPreviewDialogProps)
         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 overflow-hidden">
           {/* Controls */}
           <div className="md:col-span-1 space-y-4 overflow-y-auto p-1">
-            <h3 className="text-lg font-semibold">Layout Settings</h3>
+            <h3 className="text-lg font-semibold">Page Layout</h3>
             <div className='space-y-2'>
                 <Label>Top Margin: {settings.marginTop}px</Label>
                 <Slider value={[settings.marginTop]} onValueChange={([val]) => setSettings(s => ({...s, marginTop: val}))} min={0} max={100} step={1} />
@@ -129,10 +149,22 @@ export function PrintPreviewDialog({ isOpen, onClose }: PrintPreviewDialogProps)
                 <Label>Vertical Spacing: {settings.spacingVertical}px</Label>
                 <Slider value={[settings.spacingVertical]} onValueChange={([val]) => setSettings(s => ({...s, spacingVertical: val}))} min={0} max={50} step={1} />
             </div>
-            <div className='text-sm text-muted-foreground p-4 bg-muted/50 rounded-lg'>
+            <Separator />
+             <h3 className="text-lg font-semibold">Label Scaling</h3>
+             <div className='space-y-2'>
+                <Label>Scale: {settings.scale}%</Label>
+                <Slider value={[settings.scale]} onValueChange={([val]) => setSettings(s => ({...s, scale: val}))} min={1} max={100} step={1} />
+            </div>
+             <div className='text-sm text-muted-foreground p-4 bg-muted/50 rounded-lg space-y-1'>
+                <p className="font-semibold">Original Size:</p>
+                <p>{initialLabelWidth}px x {initialLabelHeight}px</p>
+                <p className="font-semibold mt-2">Scaled Size:</p>
+                <p>{Math.round(labelWidth)}px x {Math.round(labelHeight)}px</p>
+            </div>
+             <div className='text-sm text-muted-foreground p-4 bg-muted/50 rounded-lg space-y-1'>
                 <p>Labels per row: {labelsPerRow}</p>
                 <p>Labels per column: {labelsPerCol}</p>
-                <p>Total per page: {labelsPerRow * labelsPerCol}</p>
+                <p className="font-semibold">Total per page: {labelsPerRow * labelsPerCol}</p>
             </div>
           </div>
 
@@ -140,7 +172,7 @@ export function PrintPreviewDialog({ isOpen, onClose }: PrintPreviewDialogProps)
           <div className="md:col-span-2 bg-muted/50 p-4 flex items-center justify-center overflow-auto">
              <div 
                 className="bg-white shadow-lg relative"
-                style={{ width: `${A4_WIDTH_PX}px`, height: `${A4_HEIGHT_PX}px` }}
+                style={{ width: `${A4_WIDTH_PX}px`, height: `${A4_HEIGHT_PX}px`, transform: 'scale(0.8)', transformOrigin: 'center' }}
               >
                 {/* Margins Visual */}
                 <div 
@@ -160,6 +192,10 @@ export function PrintPreviewDialog({ isOpen, onClose }: PrintPreviewDialogProps)
                         const col = i % labelsPerRow;
                         const x = col * (labelWidth + settings.spacingHorizontal);
                         const y = row * (labelHeight + settings.spacingVertical);
+
+                        if ( (x + labelWidth) > (A4_WIDTH_PX - settings.marginLeft - settings.marginRight + 1) || (y + labelHeight) > (A4_HEIGHT_PX - settings.marginTop - settings.marginBottom + 1)) {
+                            return null;
+                        }
                         
                         return (
                             <div 
