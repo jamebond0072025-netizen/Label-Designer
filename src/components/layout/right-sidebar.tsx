@@ -41,7 +41,7 @@ export function RightSidebar() {
   const {
     activeObject,
     applyJsonData,
-    exportBulkPdf,
+    openPrintPreview,
     canvas,
     setCanvasSize,
     setCanvasBackgroundColor,
@@ -83,7 +83,7 @@ export function RightSidebar() {
   };
   
   const handleBulkGenerate = () => {
-    exportBulkPdf(bulkJsonData);
+    openPrintPreview();
   }
 
   const handleBgImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -356,7 +356,7 @@ export function RightSidebar() {
                     Generate & Download PDF
                   </Button>
                    <p className="text-xs text-muted-foreground mt-2">
-                    Provide an array of JSON objects. Each object will generate one page in the final PDF.
+                    Provide an array of JSON objects. Each object will generate one label on an A4 sheet.
                   </p>
                 </div>
               </AccordionContent>
@@ -367,5 +367,3 @@ export function RightSidebar() {
     </Sidebar>
   );
 }
-
-    

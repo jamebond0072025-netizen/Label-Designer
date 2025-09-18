@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import JsBarcode from 'jsbarcode';
 import { SaveTemplateDialog } from './save-template-dialog';
+import { PrintPreviewDialog, PrintSettings } from './print-preview-dialog';
 
 type CanvasHistory = {
     json: string;
@@ -33,7 +34,7 @@ interface EditorContextType {
   exportAsPng: () => void;
   exportAsJpg: () => void;
   exportAsPdf: () => void;
-  exportBulkPdf: (jsonData: string) => void;
+  exportBulkPdf: (jsonData: string, settings: PrintSettings) => void;
   applyJsonData: (jsonData: string) => void;
   bringForward: () => void;
   sendBackwards: () => void;
@@ -64,6 +65,7 @@ interface EditorContextType {
   setJsonData: React.Dispatch<React.SetStateAction<string>>;
   bulkJsonData: string;
   setBulkJsonData: React.Dispatch<React.SetStateAction<string>>;
+  openPrintPreview: () => void;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -75,13 +77,14 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const [activeObject, setActiveObject] = useState<FabricType.Object | null>(null);
   const [fabric, setFabric] = useState<typeof FabricType | null>(null);
   const [isSaveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [isPrintPreviewOpen, setPrintPreviewOpen] = useState(false);
   const [canvasObjects, setCanvasObjects] = useState<FabricType.Object[]>([]);
   const [zoom, setZoom] = useState(1);
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const [jsonData, setJsonData] = useState('{\n\n}');
-  const [bulkJsonData, setBulkJsonData] = useState('[\n\n]');
+  const [jsonData, setJsonData] = useState('{}');
+  const [bulkJsonData, setBulkJsonData] = useState('[]');
 
   // History state
   const [history, setHistory] = useState<CanvasHistory[]>([]);
@@ -592,7 +595,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
                 textbox.set('text', value);
                 // Make the textbox fit the new content
                 if (textbox.width) {
-                  textbox.set('width', textbox.getMinWidth());
+                  textbox.set({ width: textbox.getMinWidth() });
+                  textbox.setCoords();
                 }
                 resolve();
                 break;
@@ -650,8 +654,9 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [canvas, updateCanvasObjects, toast, saveHistory]);
 
-  const exportBulkPdf = useCallback(async (jsonData: string) => {
+  const exportBulkPdf = useCallback(async (jsonData: string, settings: PrintSettings) => {
     if (!canvas || !fabric) return;
+    setPrintPreviewOpen(false);
 
     let dataArray;
     try {
@@ -679,9 +684,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     // A4 dimensions in pixels at 96 DPI
     const A4_WIDTH = 794;
     const A4_HEIGHT = 1122;
-    const MARGIN = 20; // 20px margin
-    const pageContentWidth = A4_WIDTH - MARGIN * 2;
-    const pageContentHeight = A4_HEIGHT - MARGIN * 2;
+    const pageContentWidth = A4_WIDTH - settings.marginLeft - settings.marginRight;
+    const pageContentHeight = A4_HEIGHT - settings.marginTop - settings.marginBottom;
     
     let scale = 1;
     if (initialLabelWidth > pageContentWidth || initialLabelHeight > pageContentHeight) {
@@ -699,8 +703,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         format: 'a4'
     });
     
-    const labelsPerRow = Math.floor(pageContentWidth / labelWidth);
-    const labelsPerCol = Math.floor(pageContentHeight / labelHeight);
+    const labelsPerRow = Math.floor((pageContentWidth + settings.spacingHorizontal) / (labelWidth + settings.spacingHorizontal));
+    const labelsPerCol = Math.floor((pageContentHeight + settings.spacingVertical) / (labelHeight + settings.spacingVertical));
     
     if (labelsPerRow === 0 || labelsPerCol === 0) {
         toast({ title: "Label Too Large", description: "The label is too large to fit on an A4 page even after scaling.", variant: "destructive" });
@@ -736,8 +740,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         const row = Math.floor(indexOnPage / labelsPerRow);
         const col = indexOnPage % labelsPerRow;
 
-        const x = MARGIN + col * labelWidth;
-        const y = MARGIN + row * labelHeight;
+        const x = settings.marginLeft + col * (labelWidth + settings.spacingHorizontal);
+        const y = settings.marginTop + row * (labelHeight + settings.spacingVertical);
 
         pdf.addImage(dataUrl, 'PNG', x, y, labelWidth, labelHeight);
         labelCount++;
@@ -942,6 +946,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const exportAsJpg = () => exportCanvas('jpeg');
   const exportAsPdf = () => exportCanvas('pdf');
 
+  const openPrintPreview = () => {
+    setPrintPreviewOpen(true);
+  };
+
   const value = {
     canvas,
     activeObject,
@@ -987,6 +995,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     setJsonData,
     bulkJsonData,
     setBulkJsonData,
+    openPrintPreview,
   };
 
   return (
@@ -996,6 +1005,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         isOpen={isSaveDialogOpen}
         onClose={() => setSaveDialogOpen(false)}
         onSave={handleSave}
+      />
+      <PrintPreviewDialog
+        isOpen={isPrintPreviewOpen}
+        onClose={() => setPrintPreviewOpen(false)}
       />
     </EditorContext.Provider>
   );
@@ -1008,6 +1021,3 @@ export const useEditor = () => {
   }
   return context;
 };
-
-    
-
