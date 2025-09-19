@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEditor } from "@/components/editor-provider";
@@ -9,7 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FileDown } from "lucide-react";
+import { FileDown, Book } from "lucide-react";
+import Link from 'next/link';
 
 export function Navbar() {
   const {
@@ -23,8 +25,14 @@ export function Navbar() {
   return (
     <header className="sticky w-full top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
       <div className="flex items-center gap-2">
-        <h1 className="text-xl font-bold">LabelForge</h1>
+        <Link href="/" className="text-xl font-bold">LabelForge</Link>
       </div>
+       <nav className="ml-6 flex items-center gap-4 text-sm font-medium">
+        <Link href="/templates" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+          <Book />
+          Templates
+        </Link>
+      </nav>
       <div className="ml-auto flex items-center gap-2">
         <Button variant="outline" onClick={saveAsJson}>
           Save

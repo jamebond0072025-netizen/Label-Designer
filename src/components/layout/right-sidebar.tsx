@@ -28,11 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PanelRight, ImageUp, FileDown } from 'lucide-react';
+import { PanelRight, ImageUp, Copy } from 'lucide-react';
 import { useEditor } from '../editor-provider';
 import { predefinedSizes } from '@/lib/predefined-sizes';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { Separator } from '../ui/separator';
+import { useToast } from '@/hooks/use-toast';
 
 const DPI = 96;
 const MM_TO_IN = 0.0393701;
@@ -40,20 +40,16 @@ const MM_TO_IN = 0.0393701;
 export function RightSidebar() {
   const {
     activeObject,
-    applyJsonData,
-    openPrintPreview,
     canvas,
     setCanvasSize,
     setCanvasBackgroundColor,
     setCanvasBackgroundImage,
     jsonData,
-    setJsonData,
-    bulkJsonData,
-    setBulkJsonData,
   } = useEditor();
   const { toggleSidebar, state } = useSidebar();
   const [bgImageUrl, setBgImageUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const [selectedPreset, setSelectedPreset] = useState('custom');
   const [customWidth, setCustomWidth] = useState(canvas?.getWidth() || 800);
@@ -76,15 +72,6 @@ export function RightSidebar() {
         }
     }
   }, [canvas, unit]);
-
-
-  const handleApplyJson = () => {
-    applyJsonData(jsonData);
-  };
-  
-  const handleBulkGenerate = () => {
-    openPrintPreview();
-  }
 
   const handleBgImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -144,6 +131,14 @@ export function RightSidebar() {
           setCustomHeight(pxHeight);
       }
       setUnit(newUnit);
+  };
+  
+  const handleCopyJson = () => {
+    navigator.clipboard.writeText(jsonData);
+    toast({
+        title: "Copied to clipboard!",
+        description: "The JSON data schema has been copied.",
+    });
   };
 
   return (
@@ -319,44 +314,29 @@ export function RightSidebar() {
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="data">
-              <AccordionTrigger className="px-4">Data Binding</AccordionTrigger>
+              <AccordionTrigger className="px-4">Data Schema</AccordionTrigger>
               <AccordionContent className="px-4 space-y-4">
                 <div>
-                  <Label htmlFor="json-data">Single Label Mode (JSON)</Label>
-                  <Textarea
-                    id="json-data"
-                    placeholder='{ "key-name": "New Value" }'
-                    className="mt-2 font-mono"
-                    rows={6}
-                    value={jsonData}
-                    onChange={(e) => setJsonData(e.target.value)}
-                  />
-                  <Button className="mt-2 w-full" onClick={handleApplyJson}>
-                    Apply Data
-                  </Button>
+                  <Label htmlFor="json-data">Example JSON</Label>
+                  <div className="relative">
+                    <Textarea
+                        id="json-data"
+                        readOnly
+                        className="mt-2 font-mono bg-muted/50"
+                        rows={10}
+                        value={jsonData}
+                    />
+                     <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-3 right-3 h-7 w-7"
+                        onClick={handleCopyJson}
+                      >
+                        <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Use the unique key of an element to update its content. For
-                    text, provide a string. For images or barcodes, provide a
-                    URL or new value.
-                  </p>
-                </div>
-                <Separator />
-                <div>
-                   <Label htmlFor="bulk-json-data">Bulk Generate Mode (JSON Array)</Label>
-                   <Textarea
-                    id="bulk-json-data"
-                    placeholder='[ { "key": "value" }, { "key": "value" } ]'
-                    className="mt-2 font-mono"
-                    rows={8}
-                    value={bulkJsonData}
-                    onChange={(e) => setBulkJsonData(e.target.value)}
-                  />
-                   <Button className="mt-2 w-full" onClick={handleBulkGenerate}>
-                     <FileDown className="mr-2 h-4 w-4" />
-                    Generate & Download PDF
-                  </Button>
-                   <p className="text-xs text-muted-foreground mt-2">
-                    Provide an array of JSON objects. Each object will generate one label on an A4 sheet.
+                    This is a read-only example of the JSON data structure your design expects, based on the placeholder elements you've added.
                   </p>
                 </div>
               </AccordionContent>

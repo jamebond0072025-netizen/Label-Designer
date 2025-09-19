@@ -8,7 +8,6 @@ import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import JsBarcode from 'jsbarcode';
 import { SaveTemplateDialog } from './save-template-dialog';
-import { PrintPreviewDialog, PrintSettings } from './print-preview-dialog';
 
 type CanvasHistory = {
     json: string;
@@ -34,8 +33,6 @@ interface EditorContextType {
   exportAsPng: () => void;
   exportAsJpg: () => void;
   exportAsPdf: () => void;
-  exportBulkPdf: (jsonData: string, settings: Omit<PrintSettings, 'scale'> & { scale: number }) => void;
-  applyJsonData: (jsonData: string) => void;
   bringForward: () => void;
   sendBackwards: () => void;
   bringToFront: () => void;
@@ -62,10 +59,6 @@ interface EditorContextType {
   alignCenterVertical: () => void;
   alignBottom: () => void;
   jsonData: string;
-  setJsonData: React.Dispatch<React.SetStateAction<string>>;
-  bulkJsonData: string;
-  setBulkJsonData: React.Dispatch<React.SetStateAction<string>>;
-  openPrintPreview: () => void;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -77,14 +70,12 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const [activeObject, setActiveObject] = useState<FabricType.Object | null>(null);
   const [fabric, setFabric] = useState<typeof FabricType | null>(null);
   const [isSaveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [isPrintPreviewOpen, setPrintPreviewOpen] = useState(false);
   const [canvasObjects, setCanvasObjects] = useState<FabricType.Object[]>([]);
   const [zoom, setZoom] = useState(1);
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const [jsonData, setJsonData] = useState('{}');
-  const [bulkJsonData, setBulkJsonData] = useState('[]');
 
   // History state
   const [history, setHistory] = useState<CanvasHistory[]>([]);
@@ -121,6 +112,23 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     setHistoryIndex(newHistory.length - 1);
   }, [history, historyIndex]);
 
+  const updateJsonData = (canvasInstance: FabricType.Canvas) => {
+    const data: Record<string, any> = {};
+    canvasInstance.getObjects().forEach(obj => {
+        if (obj.get('isPlaceholder') && obj.name) {
+            const key = obj.name;
+            if (obj.get('objectType') === 'barcode') {
+                 data[key] = obj.get('barcodeValue') || '123456789';
+            } else if (obj.type === 'image') {
+                data[key] = 'https://example.com/image.png';
+            } else {
+                data[key] = 'Sample Text';
+            }
+        }
+    });
+    setJsonData(JSON.stringify(data, null, 2));
+  };
+  
   const updateCanvasObjects = useCallback((canvasInstance: FabricType.Canvas) => {
     const objects = canvasInstance.getObjects().map(obj => {
         if (!obj.id) {
@@ -129,6 +137,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         return obj;
     });
     setCanvasObjects([...objects]);
+    updateJsonData(canvasInstance);
   }, []);
 
   const initCanvas = useCallback((el: HTMLCanvasElement, container: HTMLDivElement) => {
@@ -254,33 +263,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         return `${base}-${i}`;
     }
 
-    const updateJsonForNewPlaceholder = (key: string, type: 'text' | 'image' | 'barcode') => {
-        const defaultValue = type === 'image' ? 'https://picsum.photos/seed/new/400/300' 
-                             : type === 'barcode' ? '123456789'
-                             : 'New Value';
-
-        try {
-            // Update single JSON
-            const singleData = JSON.parse(jsonData);
-            singleData[key] = defaultValue;
-            setJsonData(JSON.stringify(singleData, null, 2));
-
-            // Update bulk JSON
-            const bulkData = JSON.parse(bulkJsonData);
-            if (Array.isArray(bulkData) && bulkData.length > 0) {
-                bulkData.forEach(item => {
-                    item[key] = defaultValue;
-                });
-                setBulkJsonData(JSON.stringify(bulkData, null, 2));
-            } else {
-                 const newBulkData = [{ [key]: defaultValue }];
-                 setBulkJsonData(JSON.stringify(newBulkData, null, 2));
-            }
-        } catch (e) {
-            console.error("Failed to update JSON for new placeholder:", e);
-        }
-    };
-
     const commonProps = { id: uuidv4() };
 
     switch (type) {
@@ -293,7 +275,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       case 'placeholder-text':
         const textKey = getUniqueKey('text');
         obj = new fabric.Textbox(`{{${textKey}}}`, { ...commonProps, name: textKey, left: 50, top: 50, width: 150, fontSize: 20, isPlaceholder: true });
-        updateJsonForNewPlaceholder(textKey, 'text');
         break;
       case 'static-text':
         obj = new fabric.Textbox('Static Text', { ...commonProps, name: 'Static Text', left: 50, top: 50, width: 150, fontSize: 20, isPlaceholder: false });
@@ -306,7 +287,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             canvas.add(img);
             canvas.setActiveObject(img);
             canvas.renderAll();
-            updateJsonForNewPlaceholder(imageKey, 'image');
         }, { crossOrigin: 'anonymous' });
         return;
        case 'static-image':
@@ -343,7 +323,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
                 canvas.add(img);
                 canvas.setActiveObject(img);
                 canvas.renderAll();
-                updateJsonForNewPlaceholder(barcodeKey, 'barcode');
             });
         } catch (e) {
             console.error(e);
@@ -360,7 +339,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       canvas.setActiveObject(obj);
       canvas.renderAll();
     }
-  }, [canvas, fabric, toast, jsonData, bulkJsonData]);
+  }, [canvas, fabric, toast]);
 
  const updateObject = useCallback((id: string, properties: any) => {
     if (!canvas) return;
@@ -368,7 +347,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     if (obj) {
         // If the key (name) is being changed for a placeholder
         if (properties.name && obj.get('isPlaceholder')) {
-            const oldKey = obj.name;
             const newKey = properties.name;
             const isNameTaken = canvas.getObjects().some(o => o.name === newKey && o.id !== id);
             
@@ -379,33 +357,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
                 setActiveObject(obj);
                 return;
             }
-            
-            // Update the JSON keys
-            const updateJsonKey = (jsonString: string) => {
-                try {
-                    const data = JSON.parse(jsonString);
-                    if (Array.isArray(data)) {
-                        data.forEach(item => {
-                            if (item.hasOwnProperty(oldKey)) {
-                                item[newKey] = item[oldKey];
-                                delete item[oldKey];
-                            }
-                        });
-                    } else if (typeof data === 'object' && data !== null) {
-                        if (data.hasOwnProperty(oldKey)) {
-                            data[newKey] = data[oldKey];
-                            delete data[oldKey];
-                        }
-                    }
-                    return JSON.stringify(data, null, 2);
-                } catch (e) {
-                    console.error("Failed to update JSON key:", e);
-                    return jsonString; // Return original on error
-                }
-            };
-
-            setJsonData(updateJsonKey(jsonData));
-            setBulkJsonData(updateJsonKey(bulkJsonData));
 
             // If it's a textbox, update the text to match the new key
             if (obj.type === 'textbox') {
@@ -451,7 +402,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         setActiveObject(obj);
       }
     }
-  }, [canvas, toast, updateCanvasObjects, saveHistory, jsonData, bulkJsonData]);
+  }, [canvas, toast, updateCanvasObjects, saveHistory]);
   
   const deleteActiveObject = useCallback(() => {
     if (!canvas || !activeObject) return;
@@ -547,7 +498,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     // Reset zoom and viewport for export
     fitToScreen();
 
-
     const dataUrl = canvas.toDataURL({
       format: format === 'pdf' ? 'png' : format,
       quality: 1,
@@ -579,177 +529,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     }
     toast({ title: `Exported as ${format.toUpperCase()}!` });
   };
-
-  const _applyDataToCanvas = async (canvasInstance: FabricType.Canvas, data: Record<string, any>) => {
-    const objects = canvasInstance.getObjects();
-    for (const obj of objects) {
-      const key = obj.name;
-      if (key && obj.get('isPlaceholder') && data[key]) {
-        const value = data[key];
-
-        await new Promise<void>((resolve) => {
-          if (typeof value === 'string') {
-            switch (obj.type) {
-              case 'textbox':
-                const textbox = obj as FabricType.Textbox;
-                textbox.set('text', value);
-                // Make the textbox fit the new content
-                if (textbox.width) {
-                  textbox.set({ width: textbox.getMinWidth() });
-                  textbox.setCoords();
-                }
-                resolve();
-                break;
-              case 'image':
-                if (obj.get('objectType') === 'barcode') {
-                  const barcodeCanvas = document.createElement('canvas');
-                  try {
-                    JsBarcode(barcodeCanvas, value, { format: 'CODE128', displayValue: true, fontSize: 20 });
-                    (obj as FabricType.Image).setSrc(barcodeCanvas.toDataURL('image/png'), () => {
-                      (obj as FabricType.Image).set('barcodeValue', value);
-                      canvasInstance.renderAll();
-                      resolve();
-                    }, { crossOrigin: 'anonymous' });
-                  } catch (e) {
-                    console.error("Error generating barcode", e);
-                    resolve();
-                  }
-                } else {
-                  (obj as FabricType.Image).setSrc(value, () => {
-                    canvasInstance.renderAll();
-                    resolve();
-                  }, { crossOrigin: 'anonymous' });
-                }
-                break;
-              default:
-                resolve();
-            }
-          } else if (typeof value === 'object' && value !== null) {
-            obj.set(value);
-            resolve();
-          } else {
-            resolve();
-          }
-        });
-      }
-    }
-    canvasInstance.renderAll();
-  };
   
-  const applyJsonData = useCallback(async (jsonData: string) => {
-    if (!canvas) return;
-    try {
-      const data = JSON.parse(jsonData);
-      await _applyDataToCanvas(canvas, data);
-      saveHistory(canvas);
-      updateCanvasObjects(canvas);
-      toast({ title: "Data Applied Successfully!" });
-    } catch (error) {
-      console.error("Failed to parse or apply JSON data", error);
-      toast({
-        title: "Invalid JSON",
-        description: "Could not apply the data. Please check the JSON format.",
-        variant: "destructive",
-      });
-    }
-  }, [canvas, updateCanvasObjects, toast, saveHistory]);
-
-  const exportBulkPdf = useCallback(async (jsonData: string, settings: Omit<PrintSettings, 'scale'> & { scale: number }) => {
-    if (!canvas || !fabric) return;
-    setPrintPreviewOpen(false);
-
-    let dataArray;
-    try {
-        const parsedData = JSON.parse(jsonData);
-        if (!Array.isArray(parsedData)) {
-            throw new Error("JSON data is not an array.");
-        }
-        dataArray = parsedData;
-    } catch (error: any) {
-        toast({ title: "Invalid JSON Array", description: error.message, variant: "destructive" });
-        return;
-    }
-
-    toast({ title: "Generating PDF...", description: `Processing ${dataArray.length} labels.` });
-
-    const originalJson = canvas.toJSON(CUSTOM_PROPS);
-    const initialLabelWidth = canvas.getWidth();
-    const initialLabelHeight = canvas.getHeight();
-    
-    if (initialLabelWidth <= 0 || initialLabelHeight <= 0) {
-        toast({ title: "Invalid Label Size", description: "Cannot export with zero width or height.", variant: "destructive" });
-        return;
-    }
-
-    // A4 dimensions in pixels at 96 DPI
-    const A4_WIDTH = 794;
-    const A4_HEIGHT = 1122;
-    const pageContentWidth = A4_WIDTH - settings.marginLeft - settings.marginRight;
-    const pageContentHeight = A4_HEIGHT - settings.marginTop - settings.marginBottom;
-    
-    const labelWidth = initialLabelWidth * settings.scale;
-    const labelHeight = initialLabelHeight * settings.scale;
-
-    const pdf = new jsPDF({
-        orientation: 'p',
-        unit: 'px',
-        format: 'a4'
-    });
-    
-    if (labelWidth <= 0 || labelHeight <= 0) {
-        toast({ title: "Invalid Scaled Label Size", description: "Label dimensions after scaling are invalid.", variant: "destructive" });
-        return;
-    }
-    
-    const labelsPerRow = Math.floor((pageContentWidth + settings.spacingHorizontal) / (labelWidth + settings.spacingHorizontal));
-    const labelsPerCol = Math.floor((pageContentHeight + settings.spacingVertical) / (labelHeight + settings.spacingVertical));
-    
-    if (labelsPerRow === 0 || labelsPerCol === 0) {
-        toast({ title: "Label Too Large", description: "The label is too large to fit on an A4 page even after scaling.", variant: "destructive" });
-        return;
-    }
-    const labelsPerPage = labelsPerRow * labelsPerCol;
-
-    // Create a temporary canvas to do the rendering
-    const tempCanvasEl = document.createElement('canvas');
-    const tempCanvas = new fabric.Canvas(tempCanvasEl, {
-        width: initialLabelWidth,
-        height: initialLabelHeight,
-    });
-    
-    let labelCount = 0;
-    for (let i = 0; i < dataArray.length; i++) {
-        const data = dataArray[i];
-        
-        if (i > 0 && i % labelsPerPage === 0) {
-            pdf.addPage();
-        }
-        
-        // Load the template
-        await new Promise<void>(resolve => tempCanvas.loadFromJSON(originalJson, () => resolve()));
-        
-        // Apply data
-        await _applyDataToCanvas(tempCanvas, data);
-
-        // Add to PDF
-        const dataUrl = tempCanvas.toDataURL({ format: 'png', quality: 1, multiplier: 2 });
-        
-        const indexOnPage = i % labelsPerPage;
-        const row = Math.floor(indexOnPage / labelsPerRow);
-        const col = indexOnPage % labelsPerRow;
-
-        const x = settings.marginLeft + col * (labelWidth + settings.spacingHorizontal);
-        const y = settings.marginTop + row * (labelHeight + settings.spacingVertical);
-
-        pdf.addImage(dataUrl, 'PNG', x, y, labelWidth, labelHeight);
-        labelCount++;
-    }
-    
-    pdf.save('bulk-labels.pdf');
-    toast({ title: "PDF Generated!", description: `Your bulk labels PDF with ${labelCount} labels has been downloaded.` });
-
-  }, [canvas, fabric, toast]);
-
   const bringForward = useCallback(() => {
     if (!canvas || !activeObject) return;
     canvas.bringForward(activeObject);
@@ -944,10 +724,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const exportAsJpg = () => exportCanvas('jpeg');
   const exportAsPdf = () => exportCanvas('pdf');
 
-  const openPrintPreview = () => {
-    setPrintPreviewOpen(true);
-  };
-
   const value = {
     canvas,
     activeObject,
@@ -962,8 +738,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     exportAsPng,
     exportAsJpg,
     exportAsPdf,
-    exportBulkPdf,
-    applyJsonData,
     bringForward: () => bringForward(),
     sendBackwards: () => sendBackwards(),
     bringToFront,
@@ -990,10 +764,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     alignCenterVertical,
     alignBottom,
     jsonData,
-    setJsonData,
-    bulkJsonData,
-    setBulkJsonData,
-    openPrintPreview,
   };
 
   return (
@@ -1003,10 +773,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         isOpen={isSaveDialogOpen}
         onClose={() => setSaveDialogOpen(false)}
         onSave={handleSave}
-      />
-      <PrintPreviewDialog
-        isOpen={isPrintPreviewOpen}
-        onClose={() => setPrintPreviewOpen(false)}
       />
     </EditorContext.Provider>
   );
