@@ -264,11 +264,19 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
                         (obj as FabricType.Textbox).set('text', value);
                     } else if (obj.get('objectType') === 'barcode') {
                          const barcodeCanvasEl = document.createElement('canvas');
-                         JsBarcode(barcodeCanvasEl, value, { format: 'CODE128', displayValue: true, fontSize: 20 });
-                         const dataUrl = barcodeCanvasEl.toDataURL('image/png');
-                         await (obj as FabricType.Image).setSrc(dataUrl, () => {}, { crossOrigin: 'anonymous' });
+                         try {
+                             JsBarcode(barcodeCanvasEl, value, { format: 'CODE128', displayValue: true, fontSize: 20 });
+                             const dataUrl = barcodeCanvasEl.toDataURL('image/png');
+                             await new Promise<void>(resolveImg => {
+                                 (obj as FabricType.Image).setSrc(dataUrl, () => resolveImg(), { crossOrigin: 'anonymous' });
+                             });
+                         } catch (e) {
+                            console.error("Failed to generate barcode for value:", value, e);
+                         }
                     } else if (obj.type === 'image') {
-                        await (obj as FabricType.Image).setSrc(value, () => {}, { crossOrigin: 'anonymous' });
+                        await new Promise<void>(resolveImg => {
+                            (obj as FabricType.Image).setSrc(value, () => resolveImg(), { crossOrigin: 'anonymous' });
+                        });
                     }
                 }
             }
@@ -314,7 +322,7 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
         canvas.setDimensions({ width, height });
         renderLabels();
     }
-  }, [settings, canvas, renderLabels]);
+  }, [settings, canvas]);
 
 
   const exportAsPdf = () => {
