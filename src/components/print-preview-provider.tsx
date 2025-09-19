@@ -178,26 +178,23 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     let currentX = settings.marginLeft;
     let currentY = settings.marginTop;
 
-    const labelsToRender = showRealData ? data.length : 50; // Show up to 50 placeholders
-    let renderedCount = 0;
-
-    const placeholderRect = new fabric.Rect({
-        width: scaledWidth,
-        height: scaledHeight,
-        fill: '#f0f0f0',
-        stroke: '#cccccc',
-        strokeDashArray: [5, 5],
-        selectable: false,
-        evented: false,
-    });
-
+    const labelsToRender = showRealData ? data.length : 50; 
     let masterLabelImage: FabricType.Image | null = null;
+    let placeholderRect: FabricType.Rect | null = null;
+    
     if (showRealData && data.length > 0) {
-        // Only create the first image to avoid re-creating it if not needed
+        // Since each label is unique, we can't use a master image.
     } else {
-        // For template view, we don't need a master image, we use the placeholderRect
+        placeholderRect = new fabric.Rect({
+            width: scaledWidth,
+            height: scaledHeight,
+            fill: '#f0f0f0',
+            stroke: '#cccccc',
+            strokeDashArray: [5, 5],
+            selectable: false,
+            evented: false,
+        });
     }
-
 
     for (let i = 0; i < labelsToRender; i++) {
         if (currentY + scaledHeight > canvas.getHeight()) {
@@ -212,12 +209,12 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
             labelImage.scaleToWidth(scaledWidth);
             labelImage.set({ left: currentX, top: currentY, selectable: false, evented: false });
             canvas.add(labelImage);
-
         } else {
-            // Use placeholder for template view
-            const placeholderClone = await new Promise<FabricType.Rect>(resolve => placeholderRect.clone(resolve));
-            placeholderClone.set({ left: currentX, top: currentY });
-            canvas.add(placeholderClone);
+            if (placeholderRect) {
+                const placeholderClone = await new Promise<FabricType.Rect>(resolve => placeholderRect!.clone(resolve));
+                placeholderClone.set({ left: currentX, top: currentY });
+                canvas.add(placeholderClone);
+            }
         }
 
         currentX += scaledWidth + settings.gapHorizontal;
@@ -226,16 +223,14 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
             currentX = settings.marginLeft;
             currentY += scaledHeight + settings.gapVertical;
         }
-        renderedCount++;
     }
     
     canvas.renderAll();
     setIsLoading(false);
   }, [canvas, fabric, settings, showRealData, createLabelAsImage]);
 
-
   useEffect(() => {
-    if (isCanvasInitialized && fabric && canvas) {
+    if (fabric && canvas) {
         const pageSize = predefinedSizes.find(s => s.name.startsWith(settings.pageSize));
         const width = pageSize ? pageSize.width : 794;
         const height = pageSize ? pageSize.height : 1122;
@@ -244,8 +239,7 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
         }
         renderLabels();
     }
-  }, [settings, showRealData, isCanvasInitialized, fabric, canvas, renderLabels]);
-
+  }, [settings, showRealData, fabric, canvas, renderLabels]);
 
   const exportAsPdf = async () => {
     if (!fabric) return;
@@ -264,9 +258,19 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     pdf.deletePage(1); // Remove default blank page
 
     let dataToProcess = [...MOCK_JSON_DATA];
+    let isFirstPage = true;
 
     while(dataToProcess.length > 0) {
-        pdf.addPage([pageW, pageH], pageW > pageH ? 'l' : 'p');
+        if (!isFirstPage) {
+          pdf.addPage([pageW, pageH], pageW > pageH ? 'l' : 'p');
+        } else {
+          // For the first page, jspdf adds one by default if we delete the initial one.
+          // If we are going to add pages, let's start with a clean slate.
+          // This logic seems a bit redundant after deleting page 1, but jspdf can be quirky.
+          // A safer approach is to manage page adding explicitly.
+          pdf.addPage([pageW, pageH], pageW > pageH ? 'l' : 'p');
+          isFirstPage = false;
+        }
 
         const pageCanvas = new fabric.StaticCanvas(null, {
             width: pageW,
@@ -276,12 +280,16 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
 
         let currentX = settings.marginLeft;
         let currentY = settings.marginTop;
-        let canFitMoreOnPage = true;
-
+        
         const scaledWidth = MOCK_TEMPLATE_JSON.width * settings.scale;
         const scaledHeight = MOCK_TEMPLATE_JSON.height * settings.scale;
 
-        while(canFitMoreOnPage && dataToProcess.length > 0) {
+        while(dataToProcess.length > 0) {
+            // Check if the next label fits on the current page
+            if (currentY + scaledHeight > pageH) {
+                break; // Move to the next page
+            }
+            
             const record = dataToProcess.shift();
             if (!record) continue;
 
@@ -291,19 +299,15 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
             pageCanvas.add(labelImage);
 
             currentX += scaledWidth + settings.gapHorizontal;
-            if (currentX + scaledWidth > pageW - settings.marginLeft) { // Check against right margin
+            if (currentX + scaledWidth > pageW) {
                 currentX = settings.marginLeft;
                 currentY += scaledHeight + settings.gapVertical;
-                if (currentY + scaledHeight > pageH - settings.marginTop) { // Check against bottom margin
-                    canFitMoreOnPage = false;
-                }
             }
         }
         
-        // Wait for all images to be added and rendered
         await new Promise<void>(resolve => {
             pageCanvas.renderAll();
-            setTimeout(resolve, 100); // Small delay to ensure rendering completes
+            setTimeout(resolve, 100); 
         });
         
         const dataUrl = pageCanvas.toDataURL({ format: 'png', quality: 1, multiplier: 2 });
@@ -343,3 +347,5 @@ export const usePrintPreview = () => {
   }
   return context;
 };
+
+    
