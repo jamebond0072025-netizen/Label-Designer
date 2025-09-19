@@ -31,6 +31,20 @@ const PrintPreviewContext = createContext<PrintPreviewContextType | undefined>(u
 
 const CUSTOM_PROPS = ['id', 'name', 'objectType', 'barcodeValue', 'isPlaceholder', 'borderRadius'];
 
+// MOCK: This would typically be fetched based on the jsonId from the URL
+const MOCK_JSON_DATA = [
+  { "text-1": "John Doe", "barcode-1": "123456", "image-1": "https://picsum.photos/seed/1/400/300" },
+  { "text-1": "Jane Smith", "barcode-1": "789012", "image-1": "https://picsum.photos/seed/2/400/300" },
+  { "text-1": "Peter Jones", "barcode-1": "345678", "image-1": "https://picsum.photos/seed/3/400/300" },
+  { "text-1": "Mary Williams", "barcode-1": "901234", "image-1": "https://picsum.photos/seed/4/400/300" },
+  { "text-1": "David Brown", "barcode-1": "567890", "image-1": "https://picsum.photos/seed/5/400/300" },
+  { "text-1": "Sarah Taylor", "barcode-1": "112233", "image-1": "https://picsum.photos/seed/6/400/300" },
+  { "text-1": "James Wilson", "barcode-1": "445566", "image-1": "https://picsum.photos/seed/7/400/300" },
+  { "text-1": "Linda Martinez", "barcode-1": "778899", "image-1": "https://picsum.photos/seed/8/400/300" },
+  { "text-1": "Robert Anderson", "barcode-1": "101112", "image-1": "https://picsum.photos/seed/9/400/300" },
+  { "text-1": "Patricia Thomas", "barcode-1": "131415", "image-1": "https://picsum.photos/seed/10/400/300" },
+];
+
 export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
   const [canvas, setCanvas] = useState<FabricType.Canvas | null>(null);
   const [fabric, setFabric] = useState<typeof FabricType | null>(null);
@@ -85,37 +99,30 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     canvas.clear();
     
-    // In a real app, you would fetch these from a server using the IDs from the URL
-    // For now, we use mock data.
     const templateId = searchParams.get('templateId');
     const jsonId = searchParams.get('jsonId');
 
-    // MOCK: Fetch template. Using local storage as a mock database.
-    const mockTemplateData = localStorage.getItem('__mock_template');
+    // In a real app, you would fetch these from a server. Here we use mock data.
+    // If templateId is provided, it implies the data is in localStorage from the editor.
+    const templateDataString = localStorage.getItem('__mock_template');
     
-    // MOCK: Fetch JSON data.
-    const mockJsonData = [
-      { "text-1": "John Doe", "barcode-1": "123456", "image-1": "https://picsum.photos/seed/1/400/300" },
-      { "text-1": "Jane Smith", "barcode-1": "789012", "image-1": "https://picsum.photos/seed/2/400/300" },
-      { "text-1": "Peter Jones", "barcode-1": "345678", "image-1": "https://picsum.photos/seed/3/400/300" },
-      { "text-1": "Mary Williams", "barcode-1": "901234", "image-1": "https://picsum.photos/seed/4/400/300" },
-      { "text-1": "David Brown", "barcode-1": "567890", "image-1": "https://picsum.photos/seed/5/400/300" },
-    ];
+    // If jsonId is provided, you would fetch data. Here we just use a mock.
+    const labelData = MOCK_JSON_DATA;
 
-    if (!mockTemplateData) {
-      toast({ title: 'Error', description: 'No template found. Please save a template first in the editor.', variant: 'destructive' });
+    if (!templateDataString) {
+      toast({ title: 'Error', description: 'No template found. Please save a template in the editor first by clicking the "Print" button.', variant: 'destructive' });
       setIsLoading(false);
       return;
     }
     
-    const templateJson = JSON.parse(mockTemplateData);
+    const templateJson = JSON.parse(templateDataString);
     const labelWidth = templateJson.width;
     const labelHeight = templateJson.height;
 
     let currentX = settings.marginLeft;
     let currentY = settings.marginTop;
 
-    for (const record of mockJsonData) {
+    for (const record of labelData) {
       if (currentY + labelHeight > canvas.height!) {
         break; // No more space on the page
       }
@@ -149,7 +156,6 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
       });
       
       await loadPromise;
-
 
       const group = await new Promise<FabricType.Group>((resolve) => {
         labelCanvas.cloneAsImage((image: FabricType.Image) => {
