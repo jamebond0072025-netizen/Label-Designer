@@ -110,12 +110,10 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     targetWidth: number,
     targetHeight: number
   ): Promise<FabricType.Image> => {
-    const originalWidth = templateJson.width || targetWidth;
-    const originalHeight = templateJson.height || targetHeight;
-
+    
     const labelCanvas = new fabricInstance.StaticCanvas(null, {
-      width: originalWidth,
-      height: originalHeight,
+      width: templateJson.width,
+      height: templateJson.height,
     });
 
     await new Promise<void>((resolve) => labelCanvas.loadFromJSON({ objects: templateJson.objects }, () => resolve()));
@@ -141,39 +139,44 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
 
     await Promise.all(updatePromises);
     labelCanvas.renderAll();
-    
-    const scaleX = targetWidth / originalWidth;
-    const scaleY = targetHeight / originalHeight;
-    const scale = Math.min(scaleX, scaleY); // Maintain aspect ratio
 
-    const dataURL = labelCanvas.toDataURL({ format: 'png', multiplier: 1 / scale });
+    // Create a container canvas of the target size
+    const containerCanvas = new fabricInstance.StaticCanvas(null, {
+        width: targetWidth,
+        height: targetHeight,
+        backgroundColor: 'transparent',
+    });
+
+    // Add the rendered label to the container (it will be clipped if larger)
+    labelCanvas.cloneAsImage((img) => {
+        img.set({ left: 0, top: 0 });
+        containerCanvas.add(img);
+        containerCanvas.renderAll();
+    });
+
+    const dataURL = containerCanvas.toDataURL({ format: 'png' });
+    
+    labelCanvas.dispose();
+    containerCanvas.dispose();
 
     return new Promise<FabricType.Image>((resolve) => {
       fabricInstance.Image.fromURL(dataURL, (img) => {
-        img.scaleToWidth(targetWidth);
-        img.scaleToHeight(targetHeight);
         resolve(img);
       }, { crossOrigin: 'anonymous' });
     });
   }, []);
 
-  const renderLabels = useCallback(async (forExport = false, data: any[] = []) => {
+  const renderLabels = useCallback(async () => {
     if (!canvas || !fabric) return;
     setIsLoading(true);
     canvas.clear();
 
     const templateJson = MOCK_TEMPLATE_JSON;
-    const records = forExport ? data : [{}]; // Use empty record for preview
-
-    if (!records.length) {
-      setIsLoading(false);
-      return;
-    }
     
     const sampleRecord: Record<string, string> = {};
     templateJson.objects.forEach((obj: any) => {
         if (obj.isPlaceholder && obj.name) {
-             sampleRecord[obj.name] = obj.name;
+             sampleRecord[obj.name] = `{{${obj.name}}}`;
         }
     });
 
@@ -182,22 +185,21 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     let currentX = settings.marginLeft;
     let currentY = settings.marginTop;
 
-    for (const record of records) {
-        const labelImage = forExport 
-            ? await createLabelAsImage(fabric, templateJson, record, settings.labelWidth, settings.labelHeight)
-            : await new Promise<FabricType.Image>(res => singleLabelImage.clone((c: FabricType.Image) => res(c)));
-
-        if (currentX + settings.labelWidth > canvas.width!) {
-            currentX = settings.marginLeft;
-            currentY += settings.labelHeight + settings.gapVertical;
+    while (currentY + settings.labelHeight <= canvas.height!) {
+        while (currentX + settings.labelWidth <= canvas.width!) {
+            await new Promise<void>(resolve => {
+                singleLabelImage.clone((clonedImg: FabricType.Image) => {
+                    clonedImg.set({ left: currentX, top: currentY, selectable: false, evented: false });
+                    canvas.add(clonedImg);
+                    resolve();
+                });
+            });
+            currentX += settings.labelWidth + settings.gapHorizontal;
         }
-
-        if (currentY + settings.labelHeight > canvas.height!) break;
-
-        labelImage.set({ left: currentX, top: currentY, selectable: false, evented: false });
-        canvas.add(labelImage);
-        currentX += settings.labelWidth + settings.gapHorizontal;
+        currentX = settings.marginLeft;
+        currentY += settings.labelHeight + settings.gapVertical;
     }
+
 
     canvas.renderAll();
     setIsLoading(false);
@@ -216,60 +218,64 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
   const exportAsPdf = async () => {
     if (!fabric) return;
     toast({ title: 'Generating PDF...', description: 'Please wait, this may take a moment.' });
+    setIsLoading(true);
 
+    const pageSize = predefinedSizes.find(s => s.name.startsWith(settings.pageSize));
+    const pageW = pageSize ? pageSize.width : 794;
+    const pageH = pageSize ? pageSize.height : 1122;
+    
     const pdf = new jsPDF({
-      orientation: settings.labelWidth > settings.labelHeight ? 'l' : 'p',
+      orientation: pageW > pageH ? 'l' : 'p',
       unit: 'px',
+      format: [pageW, pageH]
     });
     pdf.deletePage(1); // Start with a clean slate
 
-    const dataChunks = [...MOCK_JSON_DATA];
-    let isFirstPage = true;
+    let dataToProcess = [...MOCK_JSON_DATA];
+    let pageNumber = 0;
 
-    while (dataChunks.length > 0) {
-      const pageCanvas = new fabric.StaticCanvas(null, {
-          width: pdf.internal.pageSize.getWidth(),
-          height: pdf.internal.pageSize.getHeight(),
-          backgroundColor: '#ffffff'
-      });
-      
-      let currentX = settings.marginLeft;
-      let currentY = settings.marginTop;
-      let recordsOnPage = 0;
-
-      while(dataChunks.length > 0) {
-          if (currentY + settings.labelHeight > pageCanvas.height!) break;
-          if (currentX + settings.labelWidth > pageCanvas.width!) {
-              currentX = settings.marginLeft;
-              currentY += settings.labelHeight + settings.gapVertical;
-              if (currentY + settings.labelHeight > pageCanvas.height!) break;
-          }
-          
-          const record = dataChunks.shift();
-          if(!record) continue;
-
-          const labelImage = await createLabelAsImage(fabric, MOCK_TEMPLATE_JSON, record, settings.labelWidth, settings.labelHeight);
-          labelImage.set({ left: currentX, top: currentY });
-          pageCanvas.add(labelImage);
-
-          currentX += settings.labelWidth + settings.gapHorizontal;
-          recordsOnPage++;
-      }
-
-      if (recordsOnPage > 0) {
-        if (!isFirstPage) {
-            pdf.addPage();
+    while(dataToProcess.length > 0) {
+        pageNumber++;
+        if (pageNumber > 1) {
+            pdf.addPage([pageW, pageH], pageW > pageH ? 'l' : 'p');
         }
-        isFirstPage = false;
+
+        const pageCanvas = new fabric.StaticCanvas(null, {
+            width: pageW,
+            height: pageH,
+            backgroundColor: '#ffffff'
+        });
+
+        let currentX = settings.marginLeft;
+        let currentY = settings.marginTop;
+        let canFitMore = true;
+
+        while(canFitMore && dataToProcess.length > 0) {
+            const record = dataToProcess.shift();
+            if (!record) continue;
+
+            const labelImage = await createLabelAsImage(fabric, MOCK_TEMPLATE_JSON, record, settings.labelWidth, settings.labelHeight);
+            labelImage.set({ left: currentX, top: currentY });
+            pageCanvas.add(labelImage);
+
+            currentX += settings.labelWidth + settings.gapHorizontal;
+            if (currentX + settings.labelWidth > pageW) {
+                currentX = settings.marginLeft;
+                currentY += settings.labelHeight + settings.gapVertical;
+                if (currentY + settings.labelHeight > pageH) {
+                    canFitMore = false;
+                }
+            }
+        }
         
         const dataUrl = pageCanvas.toDataURL({ format: 'png', quality: 1, multiplier: 2 });
-        pdf.addImage(dataUrl, 'PNG', 0, 0, pageCanvas.width!, pageCanvas.height!);
-      }
-      pageCanvas.dispose();
+        pdf.addImage(dataUrl, 'PNG', 0, 0, pageW, pageH);
+        pageCanvas.dispose();
     }
     
     pdf.save('print-labels.pdf');
     toast({ title: 'Exported as PDF!' });
+    setIsLoading(false);
   };
 
   const value = {
