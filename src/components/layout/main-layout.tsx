@@ -7,7 +7,7 @@ import { Navbar } from "./navbar";
 import { LeftSidebar } from "./left-sidebar";
 import { RightSidebar } from "./right-sidebar";
 import { EditorWorkspace } from "../editor/editor-workspace";
-import { TooltipProvider } from "../ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export function MainLayout() {
   return (
