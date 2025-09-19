@@ -1,7 +1,7 @@
 
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import type { fabric as FabricType } from 'fabric';
 import { useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +20,7 @@ interface PrintSettings {
 interface PrintPreviewContextType {
   canvas: FabricType.Canvas | null;
   initCanvas: (el: HTMLCanvasElement, container: HTMLDivElement) => void;
-  fabric: typeof FabricType | null;
+  fabric: typeof FabricType.fabric | null;
   settings: PrintSettings;
   setSettings: React.Dispatch<React.SetStateAction<PrintSettings>>;
   exportAsPdf: () => void;
@@ -47,46 +47,10 @@ const MOCK_TEMPLATE_JSON = {
             "fill": "#000000",
             "stroke": null,
             "strokeWidth": 1,
-            "strokeDashArray": null,
-            "strokeLineCap": "butt",
-            "strokeDashOffset": 0,
-            "strokeLineJoin": "miter",
-            "strokeUniform": false,
-            "strokeMiterLimit": 4,
-            "scaleX": 1,
-            "scaleY": 1,
-            "angle": 0,
-            "flipX": false,
-            "flipY": false,
-            "opacity": 1,
-            "shadow": null,
-            "visible": true,
-            "backgroundColor": "",
-            "fillRule": "nonzero",
-            "paintFirst": "fill",
-            "globalCompositeOperation": "source-over",
-            "skewX": 0,
-            "skewY": 0,
             "fontFamily": "Inter",
-            "fontWeight": "normal",
             "fontSize": 20,
             "text": "{{text-1}}",
-            "underline": false,
-            "overline": false,
-            "linethrough": false,
             "textAlign": "left",
-            "fontStyle": "normal",
-            "lineHeight": 1.16,
-            "textBackgroundColor": "",
-            "charSpacing": 0,
-            "styles": {},
-            "direction": "ltr",
-            "path": null,
-            "pathStartOffset": 0,
-            "pathSide": "left",
-            "pathAlign": "baseline",
-            "minWidth": 20,
-            "splitByGrapheme": false,
             "id": "e0a6b2c8",
             "name": "text-1",
             "isPlaceholder": true
@@ -100,34 +64,6 @@ const MOCK_TEMPLATE_JSON = {
             "top": 50,
             "width": 200,
             "height": 75,
-            "fill": "rgb(0,0,0)",
-            "stroke": null,
-            "strokeWidth": 0,
-            "strokeDashArray": null,
-            "strokeLineCap": "butt",
-            "strokeDashOffset": 0,
-            "strokeLineJoin": "miter",
-            "strokeUniform": false,
-            "strokeMiterLimit": 4,
-            "scaleX": 1,
-            "scaleY": 1,
-            "angle": 0,
-            "flipX": false,
-            "flipY": false,
-            "opacity": 1,
-            "shadow": null,
-            "visible": true,
-            "backgroundColor": "",
-            "fillRule": "nonzero",
-            "paintFirst": "fill",
-            "globalCompositeOperation": "source-over",
-            "skewX": 0,
-            "skewY": 0,
-            "cropX": 0,
-            "cropY": 0,
-            "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAAAyCAYAAAC2fimRAAAAAklEQVR4nO3BQQEAAACCIP+vbkhAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB8GX9qAAEAAAAASUVORK5CYII=",
-            "crossOrigin": "anonymous",
-            "filters": [],
             "id": "a9b3c1d4",
             "name": "barcode-1",
             "objectType": "barcode",
@@ -143,9 +79,6 @@ const MOCK_TEMPLATE_JSON = {
             "top": 20,
             "width": 150,
             "height": 112.5,
-            "fill": "rgb(0,0,0)",
-            "stroke": "#000000",
-            "strokeWidth": 1,
             "scaleX": 0.75,
             "scaleY": 0.75,
             "src": "https://placehold.co/400x300/EFEFEF/AAAAAA?text=Placeholder",
@@ -176,7 +109,7 @@ const MOCK_JSON_DATA = [
 
 export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
   const [canvas, setCanvas] = useState<FabricType.Canvas | null>(null);
-  const [fabric, setFabric] = useState<typeof FabricType | null>(null);
+  const [fabric, setFabric] = useState<typeof FabricType.fabric | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const searchParams = useSearchParams();
@@ -221,6 +154,60 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
       canvasInstance.dispose();
     };
   }, [fabric, settings.pageSize, canvas]);
+  
+  const createLabelAsImage = useCallback(async (
+    fabricInstance: typeof FabricType.fabric,
+    templateJson: any,
+    labelWidth: number,
+    labelHeight: number,
+    record: Record<string, string>
+  ): Promise<FabricType.Image> => {
+    const labelCanvas = new fabricInstance.StaticCanvas(null, {
+      width: labelWidth,
+      height: labelHeight,
+    });
+
+    const loadCanvasPromise = new Promise<void>((resolve) => {
+      labelCanvas.loadFromJSON(templateJson, () => resolve());
+    });
+    await loadCanvasPromise;
+
+    const updatePromises: Promise<any>[] = [];
+
+    for (const obj of labelCanvas.getObjects()) {
+      if (obj.get('isPlaceholder') && obj.name && record[obj.name]) {
+        const value = record[obj.name];
+        if (obj.type === 'textbox') {
+          (obj as FabricType.Textbox).set('text', value);
+        } else if (obj.get('objectType') === 'barcode') {
+          const barcodeCanvasEl = document.createElement('canvas');
+          try {
+            JsBarcode(barcodeCanvasEl, value, { format: 'CODE128', displayValue: true, fontSize: 20 });
+            const dataUrl = barcodeCanvasEl.toDataURL('image/png');
+            const p = new Promise<void>(resolveImg => {
+              (obj as FabricType.Image).setSrc(dataUrl, () => resolveImg(), { crossOrigin: 'anonymous' });
+            });
+            updatePromises.push(p);
+          } catch (e) {
+            console.error("Failed to generate barcode for value:", value, e);
+          }
+        } else if (obj.type === 'image') {
+          const p = new Promise<void>(resolveImg => {
+            (obj as FabricType.Image).setSrc(value, () => resolveImg(), { crossOrigin: 'anonymous' });
+          });
+          updatePromises.push(p);
+        }
+      }
+    }
+
+    await Promise.all(updatePromises);
+    labelCanvas.renderAll();
+
+    return new Promise<FabricType.Image>((resolve) => {
+      labelCanvas.cloneAsImage((image: FabricType.Image) => resolve(image));
+    });
+  }, []);
+
 
   const renderLabels = useCallback(async () => {
     if (!canvas || !fabric) return;
@@ -249,56 +236,14 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
         break; // No more space on the page
       }
 
-      const labelCanvas = new fabric.StaticCanvas(null, {
-        width: labelWidth,
-        height: labelHeight,
-      });
-
-      // Create a promise to await canvas loading
-      const loadPromise = new Promise<void>((resolve) => {
-          labelCanvas.loadFromJSON(templateJson, async () => {
-            for (const obj of labelCanvas.getObjects()) {
-                if (obj.get('isPlaceholder') && obj.name && record[obj.name]) {
-                    const value = record[obj.name];
-                    if (obj.type === 'textbox') {
-                        (obj as FabricType.Textbox).set('text', value);
-                    } else if (obj.get('objectType') === 'barcode') {
-                         const barcodeCanvasEl = document.createElement('canvas');
-                         try {
-                             JsBarcode(barcodeCanvasEl, value, { format: 'CODE128', displayValue: true, fontSize: 20 });
-                             const dataUrl = barcodeCanvasEl.toDataURL('image/png');
-                             await new Promise<void>(resolveImg => {
-                                 (obj as FabricType.Image).setSrc(dataUrl, () => resolveImg(), { crossOrigin: 'anonymous' });
-                             });
-                         } catch (e) {
-                            console.error("Failed to generate barcode for value:", value, e);
-                         }
-                    } else if (obj.type === 'image') {
-                        await new Promise<void>(resolveImg => {
-                            (obj as FabricType.Image).setSrc(value, () => resolveImg(), { crossOrigin: 'anonymous' });
-                        });
-                    }
-                }
-            }
-            labelCanvas.renderAll();
-            resolve();
-          });
-      });
+      const labelImage = await createLabelAsImage(fabric, templateJson, labelWidth, labelHeight, record);
       
-      await loadPromise;
-
-      const group = await new Promise<FabricType.Group>((resolve) => {
-        labelCanvas.cloneAsImage((image: FabricType.Image) => {
-            const group = new fabric.Group([image], {
-              left: currentX,
-              top: currentY,
-              selectable: false,
-              evented: false,
-            });
-            resolve(group);
-        });
+      const group = new fabric.Group([labelImage], {
+          left: currentX,
+          top: currentY,
+          selectable: false,
+          evented: false,
       });
-
       canvas.add(group);
       
       currentX += labelWidth + settings.gapHorizontal;
@@ -311,18 +256,18 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     canvas.renderAll();
     setIsLoading(false);
 
-  }, [canvas, fabric, settings, toast]);
+  }, [canvas, fabric, settings, toast, createLabelAsImage]);
 
 
   useEffect(() => {
-    if (canvas) {
+    if (canvas && fabric) {
         const pageSize = predefinedSizes.find(s => s.name.startsWith(settings.pageSize));
         const width = pageSize ? pageSize.width : 794;
         const height = pageSize ? pageSize.height : 1122;
         canvas.setDimensions({ width, height });
         renderLabels();
     }
-  }, [settings, canvas]);
+  }, [settings, canvas, fabric, renderLabels]);
 
 
   const exportAsPdf = () => {
