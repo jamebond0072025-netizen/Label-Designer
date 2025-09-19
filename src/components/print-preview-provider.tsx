@@ -31,6 +31,135 @@ const PrintPreviewContext = createContext<PrintPreviewContextType | undefined>(u
 
 const CUSTOM_PROPS = ['id', 'name', 'objectType', 'barcodeValue', 'isPlaceholder', 'borderRadius'];
 
+// MOCK: Hardcoded template data
+const MOCK_TEMPLATE_JSON = {
+    "version": "5.3.0",
+    "objects": [
+        {
+            "type": "textbox",
+            "version": "5.3.0",
+            "originX": "left",
+            "originY": "top",
+            "left": 20,
+            "top": 20,
+            "width": 200,
+            "height": 22.6,
+            "fill": "#000000",
+            "stroke": null,
+            "strokeWidth": 1,
+            "strokeDashArray": null,
+            "strokeLineCap": "butt",
+            "strokeDashOffset": 0,
+            "strokeLineJoin": "miter",
+            "strokeUniform": false,
+            "strokeMiterLimit": 4,
+            "scaleX": 1,
+            "scaleY": 1,
+            "angle": 0,
+            "flipX": false,
+            "flipY": false,
+            "opacity": 1,
+            "shadow": null,
+            "visible": true,
+            "backgroundColor": "",
+            "fillRule": "nonzero",
+            "paintFirst": "fill",
+            "globalCompositeOperation": "source-over",
+            "skewX": 0,
+            "skewY": 0,
+            "fontFamily": "Inter",
+            "fontWeight": "normal",
+            "fontSize": 20,
+            "text": "{{text-1}}",
+            "underline": false,
+            "overline": false,
+            "linethrough": false,
+            "textAlign": "left",
+            "fontStyle": "normal",
+            "lineHeight": 1.16,
+            "textBackgroundColor": "",
+            "charSpacing": 0,
+            "styles": {},
+            "direction": "ltr",
+            "path": null,
+            "pathStartOffset": 0,
+            "pathSide": "left",
+            "pathAlign": "baseline",
+            "minWidth": 20,
+            "splitByGrapheme": false,
+            "id": "e0a6b2c8",
+            "name": "text-1",
+            "isPlaceholder": true
+        },
+        {
+            "type": "image",
+            "version": "5.3.0",
+            "originX": "left",
+            "originY": "top",
+            "left": 20,
+            "top": 50,
+            "width": 200,
+            "height": 75,
+            "fill": "rgb(0,0,0)",
+            "stroke": null,
+            "strokeWidth": 0,
+            "strokeDashArray": null,
+            "strokeLineCap": "butt",
+            "strokeDashOffset": 0,
+            "strokeLineJoin": "miter",
+            "strokeUniform": false,
+            "strokeMiterLimit": 4,
+            "scaleX": 1,
+            "scaleY": 1,
+            "angle": 0,
+            "flipX": false,
+            "flipY": false,
+            "opacity": 1,
+            "shadow": null,
+            "visible": true,
+            "backgroundColor": "",
+            "fillRule": "nonzero",
+            "paintFirst": "fill",
+            "globalCompositeOperation": "source-over",
+            "skewX": 0,
+            "skewY": 0,
+            "cropX": 0,
+            "cropY": 0,
+            "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAAAyCAYAAAC2fimRAAAAAklEQVR4nO3BQQEAAACCIP+vbkhAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB8GX9qAAEAAAAASUVORK5CYII=",
+            "crossOrigin": "anonymous",
+            "filters": [],
+            "id": "a9b3c1d4",
+            "name": "barcode-1",
+            "objectType": "barcode",
+            "barcodeValue": "1234567890",
+            "isPlaceholder": true
+        },
+         {
+            "type": "image",
+            "version": "5.3.0",
+            "originX": "left",
+            "originY": "top",
+            "left": 230,
+            "top": 20,
+            "width": 150,
+            "height": 112.5,
+            "fill": "rgb(0,0,0)",
+            "stroke": "#000000",
+            "strokeWidth": 1,
+            "scaleX": 0.75,
+            "scaleY": 0.75,
+            "src": "https://placehold.co/400x300/EFEFEF/AAAAAA?text=Placeholder",
+            "crossOrigin": "anonymous",
+            "id": "c5d8e2f1",
+            "name": "image-1",
+            "isPlaceholder": true
+        }
+    ]
+};
+const MOCK_LABEL_WIDTH = 400;
+const MOCK_LABEL_HEIGHT = 150;
+
+
 // MOCK: This would typically be fetched based on the jsonId from the URL
 const MOCK_JSON_DATA = [
   { "text-1": "John Doe", "barcode-1": "123456", "image-1": "https://picsum.photos/seed/1/400/300" },
@@ -99,25 +228,18 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     canvas.clear();
     
-    const templateId = searchParams.get('templateId');
-    const jsonId = searchParams.get('jsonId');
-
     // In a real app, you would fetch these from a server. Here we use mock data.
-    // If templateId is provided, it implies the data is in localStorage from the editor.
-    const templateDataString = localStorage.getItem('__mock_template');
-    
-    // If jsonId is provided, you would fetch data. Here we just use a mock.
+    const templateJson = MOCK_TEMPLATE_JSON;
     const labelData = MOCK_JSON_DATA;
 
-    if (!templateDataString) {
-      toast({ title: 'Error', description: 'No template found. Please save a template in the editor first by clicking the "Print" button.', variant: 'destructive' });
+    if (!templateJson) {
+      toast({ title: 'Error', description: 'No template found.', variant: 'destructive' });
       setIsLoading(false);
       return;
     }
     
-    const templateJson = JSON.parse(templateDataString);
-    const labelWidth = templateJson.width;
-    const labelHeight = templateJson.height;
+    const labelWidth = MOCK_LABEL_WIDTH;
+    const labelHeight = MOCK_LABEL_HEIGHT;
 
     let currentX = settings.marginLeft;
     let currentY = settings.marginTop;
@@ -134,7 +256,7 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
 
       // Create a promise to await canvas loading
       const loadPromise = new Promise<void>((resolve) => {
-          labelCanvas.loadFromJSON(templateJson.canvas, async () => {
+          labelCanvas.loadFromJSON(templateJson, async () => {
             for (const obj of labelCanvas.getObjects()) {
                 if (obj.get('isPlaceholder') && obj.name && record[obj.name]) {
                     const value = record[obj.name];
@@ -181,7 +303,7 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     canvas.renderAll();
     setIsLoading(false);
 
-  }, [canvas, fabric, settings, searchParams, toast]);
+  }, [canvas, fabric, settings, toast]);
 
 
   useEffect(() => {

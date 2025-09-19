@@ -20,26 +20,7 @@ export function Navbar() {
     exportAsPng,
     exportAsJpg,
     exportAsPdf,
-    canvas,
   } = useEditor();
-
-  const handleSaveForPrint = () => {
-    if (!canvas) return;
-
-    const data = {
-        canvas: canvas.toJSON(['id', 'name', 'objectType', 'barcodeValue', 'isPlaceholder', 'borderRadius']),
-        width: canvas.getWidth(),
-        height: canvas.getHeight(),
-        backgroundColor: canvas.backgroundColor,
-        backgroundImage: canvas.backgroundImage?.toJSON(['id', 'name', 'objectType', 'barcodeValue', 'isPlaceholder', 'borderRadius']),
-    };
-
-    // Use local storage as a mock database for the template
-    localStorage.setItem('__mock_template', JSON.stringify(data));
-
-    // Redirect to the print preview page
-    window.location.href = `/print-preview?templateId=mock-template&jsonId=mock-json`;
-  };
 
   return (
     <header className="sticky w-full top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
@@ -53,8 +34,10 @@ export function Navbar() {
         <Button variant="outline" onClick={loadFromJson}>
           Load File
         </Button>
-         <Button variant="outline" onClick={handleSaveForPrint}>
-          <Printer className="mr-2" /> Print
+         <Button variant="outline" asChild>
+          <Link href="/print-preview">
+            <Printer className="mr-2" /> Print
+          </Link>
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
