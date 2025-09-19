@@ -15,6 +15,8 @@ interface PrintSettings {
   marginLeft: number;
   gapHorizontal: number;
   gapVertical: number;
+  labelWidth: number;
+  labelHeight: number;
 }
 
 interface PrintPreviewContextType {
@@ -89,8 +91,6 @@ const MOCK_TEMPLATE_JSON = {
         }
     ]
 };
-const MOCK_LABEL_WIDTH = 400;
-const MOCK_LABEL_HEIGHT = 150;
 
 export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
   const [canvas, setCanvas] = useState<FabricType.Canvas | null>(null);
@@ -105,6 +105,8 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     marginLeft: 20,
     gapHorizontal: 10,
     gapVertical: 10,
+    labelWidth: 400,
+    labelHeight: 150,
   });
 
   useEffect(() => {
@@ -225,8 +227,7 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     
-    const labelWidth = MOCK_LABEL_WIDTH;
-    const labelHeight = MOCK_LABEL_HEIGHT;
+    const { labelWidth, labelHeight } = settings;
     
     const singleLabelImage = await createLabelAsImage(fabric, templateJson, labelWidth, labelHeight);
 

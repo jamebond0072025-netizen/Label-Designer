@@ -6,12 +6,19 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { predefinedSizes } from '@/lib/predefined-sizes';
+import { Separator } from '../ui/separator';
 
 export function PrintSettings() {
   const { settings, setSettings, isLoading } = usePrintPreview();
 
   const handleSettingChange = (key: keyof typeof settings, value: string | number) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    const numValue = typeof value === 'string' ? parseInt(value, 10) : value;
+    if (isNaN(numValue)) return;
+    setSettings(prev => ({ ...prev, [key]: numValue }));
+  };
+  
+  const handlePageSizeChange = (value: string) => {
+    setSettings(prev => ({ ...prev, pageSize: value }));
   };
 
   return (
@@ -23,7 +30,7 @@ export function PrintSettings() {
           <Label htmlFor="page-size">Page Size</Label>
           <Select
             value={settings.pageSize}
-            onValueChange={(value) => handleSettingChange('pageSize', value)}
+            onValueChange={handlePageSizeChange}
           >
             <SelectTrigger id="page-size">
               <SelectValue placeholder="Select page size" />
@@ -37,13 +44,33 @@ export function PrintSettings() {
             </SelectContent>
           </Select>
         </div>
+        <Separator />
+        <div>
+          <Label htmlFor="label-width">Label Width (px)</Label>
+          <Input
+            id="label-width"
+            type="number"
+            value={settings.labelWidth}
+            onChange={(e) => handleSettingChange('labelWidth', e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="label-height">Label Height (px)</Label>
+          <Input
+            id="label-height"
+            type="number"
+            value={settings.labelHeight}
+            onChange={(e) => handleSettingChange('labelHeight', e.target.value)}
+          />
+        </div>
+        <Separator />
         <div>
           <Label htmlFor="margin-top">Top Margin (px)</Label>
           <Input
             id="margin-top"
             type="number"
             value={settings.marginTop}
-            onChange={(e) => handleSettingChange('marginTop', parseInt(e.target.value, 10))}
+            onChange={(e) => handleSettingChange('marginTop', e.target.value)}
           />
         </div>
         <div>
@@ -52,7 +79,7 @@ export function PrintSettings() {
             id="margin-left"
             type="number"
             value={settings.marginLeft}
-            onChange={(e) => handleSettingChange('marginLeft', parseInt(e.target.value, 10))}
+            onChange={(e) => handleSettingChange('marginLeft', e.target.value)}
           />
         </div>
         <div>
@@ -61,7 +88,7 @@ export function PrintSettings() {
             id="gap-horizontal"
             type="number"
             value={settings.gapHorizontal}
-            onChange={(e) => handleSettingChange('gapHorizontal', parseInt(e.target.value, 10))}
+            onChange={(e) => handleSettingChange('gapHorizontal', e.target.value)}
           />
         </div>
         <div>
@@ -70,7 +97,7 @@ export function PrintSettings() {
             id="gap-vertical"
             type="number"
             value={settings.gapVertical}
-            onChange={(e) => handleSettingChange('gapVertical', parseInt(e.target.value, 10))}
+            onChange={(e) => handleSettingChange('gapVertical', e.target.value)}
           />
         </div>
       </div>
