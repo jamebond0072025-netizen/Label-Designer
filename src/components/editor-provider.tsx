@@ -281,7 +281,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         break;
       case 'placeholder-image':
         const imageKey = getUniqueKey('image');
-        fabric.Image.fromURL('https://picsum.photos/seed/product/400/300', (img) => {
+        fabric.Image.fromURL('https://placehold.co/400x300/EFEFEF/AAAAAA?text=Placeholder', (img) => {
             img.set({ ...commonProps, name: imageKey, left: 50, top: 50, isPlaceholder: true });
             img.scaleToWidth(200);
             canvas.add(img);
@@ -290,7 +290,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         }, { crossOrigin: 'anonymous' });
         return;
        case 'static-image':
-        fabric.Image.fromURL('https://picsum.photos/seed/static/400/300', (img) => {
+        fabric.Image.fromURL('https://placehold.co/400x300/EFEFEF/AAAAAA?text=Static+Image', (img) => {
             img.set({ ...commonProps, name: 'Static Image', left: 50, top: 50, isPlaceholder: false });
             img.scaleToWidth(200);
             canvas.add(img);
