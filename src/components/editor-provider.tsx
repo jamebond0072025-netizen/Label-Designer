@@ -63,7 +63,7 @@ interface EditorContextType {
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
-const CUSTOM_PROPS = ['id', 'name', 'objectType', 'barcodeValue', 'isPlaceholder'];
+const CUSTOM_PROPS = ['id', 'name', 'objectType', 'barcodeValue', 'isPlaceholder', 'borderRadius'];
 
 export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const [canvas, setCanvas] = useState<FabricType.Canvas | null>(null);
@@ -386,12 +386,34 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             toast({ title: "Invalid barcode data", variant: "destructive" });
          }
       } else {
-        if (properties.shadow) {
-            obj.set('shadow', new fabric.Shadow(properties.shadow));
-        } else {
-            obj.set(properties);
+        if (properties.shadow && obj.shadow) {
+            // If shadow exists, update its properties
+            obj.shadow.set(properties.shadow);
+            delete properties.shadow;
         }
 
+        if (properties.borderRadius !== undefined && obj.type === 'image') {
+            const image = obj as FabricType.Image;
+            const radius = properties.borderRadius;
+            image.set('borderRadius', radius); // Store for state management
+            
+            if (radius > 0) {
+                image.clipPath = new fabric.Rect({
+                    left: -image.width! / 2,
+                    top: -image.height! / 2,
+                    rx: radius / image.scaleX!,
+                    ry: radius / image.scaleY!,
+                    width: image.width,
+                    height: image.height,
+                });
+            } else {
+                image.clipPath = undefined;
+            }
+            delete properties.borderRadius;
+        }
+        
+        obj.set(properties);
+        
         if (properties.width !== undefined) {
             obj.scaleToWidth(properties.width);
         }
@@ -402,7 +424,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         canvas.renderAll();
         saveHistory(canvas);
         updateCanvasObjects(canvas);
-        setActiveObject(null);
+        setActiveObject(null); // Force re-render of properties panel
         setActiveObject(obj);
       }
     }
@@ -437,7 +459,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const loadFromJson = useCallback(() => {
-    if (!canvas) return;
+    if (!canvas || !fabric) return;
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
@@ -455,16 +477,32 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             if (obj.get('objectType') === 'barcode') {
               updateObject(obj.id!, { barcodeValue: obj.get('barcodeValue') });
             }
+            if (obj.type === 'image' && obj.get('borderRadius')) {
+              updateObject(obj.id!, { borderRadius: obj.get('borderRadius') });
+            }
           });
           isRecordingHistory.current = true;
           saveHistory(canvas);
           toast({ title: "Template Loaded!" });
+        }, (o: any, object: FabricType.Object) => {
+             // This is a reviver function that runs for each object loaded
+            if (object.type === 'image' && o.borderRadius > 0) {
+                const image = object as FabricType.Image;
+                image.clipPath = new fabric.Rect({
+                    left: -image.width! / 2,
+                    top: -image.height! / 2,
+                    rx: o.borderRadius / image.scaleX!,
+                    ry: o.borderRadius / image.scaleY!,
+                    width: image.width,
+                    height: image.height,
+                });
+            }
         });
       };
       reader.readAsText(file);
     };
     input.click();
-  }, [canvas, toast, updateObject, updateCanvasObjects, saveHistory]);
+  }, [canvas, fabric, toast, updateObject, updateCanvasObjects, saveHistory]);
   
   const loadFromHistory = useCallback((entry: CanvasHistory) => {
     if (!canvas) return;
@@ -500,8 +538,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const currentVpt = canvas.viewportTransform;
 
     // Reset zoom and viewport for export
-    fitToScreen();
-
+    canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    
     const dataUrl = canvas.toDataURL({
       format: format === 'pdf' ? 'png' : format,
       quality: 1,

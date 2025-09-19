@@ -32,13 +32,13 @@ export function ImageProperties({ object, updateObject }: ImagePropertiesProps) 
   
   const handleShadowPropertyChange = (prop: string, value: any) => {
     if (object.id) {
-      const currentShadow = object.shadow as fabric.Shadow || new fabric.Shadow({});
-      currentShadow.set({ [prop]: value });
-      updateObject(object.id, { shadow: currentShadow });
+      const shadowProperties = { [prop]: value };
+      updateObject(object.id, { shadow: shadowProperties });
     }
   };
 
   const shadow = object.shadow as fabric.Shadow;
+  const borderRadius = object.get('borderRadius') || 0;
 
   return (
     <div className="space-y-4">
@@ -63,6 +63,16 @@ export function ImageProperties({ object, updateObject }: ImagePropertiesProps) 
             onValueChange={(value) => handlePropertyChange('opacity', value[0])}
         />
       </div>
+       <Separator />
+      <div>
+        <Label htmlFor="image-border-radius">Border Radius</Label>
+        <Slider 
+            id="image-border-radius"
+            min={0} max={Math.min(object.width!, object.height!) / 2} step={1} 
+            value={[borderRadius]} 
+            onValueChange={(value) => handlePropertyChange('borderRadius', value[0])}
+        />
+      </div>
       <Separator />
       <div className="grid grid-cols-2 gap-2">
         <div>
@@ -70,7 +80,7 @@ export function ImageProperties({ object, updateObject }: ImagePropertiesProps) 
           <Input 
               id="image-stroke"
               type="color"
-              value={object.stroke}
+              value={object.stroke || '#000000'}
               onChange={(e) => handlePropertyChange('stroke', e.target.value)}
               className="p-1"
           />
@@ -80,7 +90,7 @@ export function ImageProperties({ object, updateObject }: ImagePropertiesProps) 
           <Input 
               id="image-stroke-width"
               type="number"
-              value={object.strokeWidth}
+              value={object.strokeWidth || 0}
               onChange={(e) => handlePropertyChange('strokeWidth', parseInt(e.target.value, 10))}
           />
         </div>
