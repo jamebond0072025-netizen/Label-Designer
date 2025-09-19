@@ -204,7 +204,10 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     labelCanvas.renderAll();
 
     return new Promise<FabricType.Image>((resolve) => {
-      labelCanvas.cloneAsImage((image: FabricType.Image) => resolve(image));
+      const dataURL = labelCanvas.toDataURL({ format: 'png' });
+      fabricInstance.Image.fromURL(dataURL, (img) => {
+        resolve(img);
+      }, { crossOrigin: 'anonymous' });
     });
   }, []);
 
@@ -238,13 +241,13 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
 
       const labelImage = await createLabelAsImage(fabric, templateJson, labelWidth, labelHeight, record);
       
-      const group = new fabric.Group([labelImage], {
+      labelImage.set({
           left: currentX,
           top: currentY,
           selectable: false,
           evented: false,
       });
-      canvas.add(group);
+      canvas.add(labelImage);
       
       currentX += labelWidth + settings.gapHorizontal;
       if (currentX + labelWidth > canvas.width!) {
@@ -267,7 +270,7 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
         canvas.setDimensions({ width, height });
         renderLabels();
     }
-  }, [settings, canvas, fabric, renderLabels]);
+  }, [settings, canvas, fabric]);
 
 
   const exportAsPdf = () => {
