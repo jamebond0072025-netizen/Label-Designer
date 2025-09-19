@@ -9,6 +9,7 @@ import { predefinedSizes } from '@/lib/predefined-sizes';
 import { Separator } from '../ui/separator';
 import { Switch } from '../ui/switch';
 import { Slider } from '../ui/slider';
+import { Loader2 } from 'lucide-react';
 
 export function PrintSettings() {
   const { settings, setSettings, isLoading, showRealData, setShowRealData } = usePrintPreview();
@@ -29,8 +30,15 @@ export function PrintSettings() {
 
   return (
     <aside className="w-80 border-l bg-background p-4 flex flex-col gap-6 overflow-y-auto">
-      <h2 className="text-lg font-semibold">Print Settings</h2>
-      {isLoading && <p className="text-sm text-muted-foreground">Rendering preview...</p>}
+      <div className="flex flex-col">
+        <h2 className="text-lg font-semibold">Print Settings</h2>
+        {isLoading && (
+            <div className="flex items-center text-sm text-muted-foreground mt-1">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <span>Rendering preview...</span>
+            </div>
+        )}
+      </div>
       <div className="space-y-4" style={{ opacity: isLoading ? 0.5 : 1, pointerEvents: isLoading ? 'none' : 'auto' }}>
         <div className="flex items-center justify-between">
             <Label htmlFor="preview-mode">Show Real Data</Label>

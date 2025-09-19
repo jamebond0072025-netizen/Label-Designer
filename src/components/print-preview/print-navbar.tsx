@@ -3,11 +3,11 @@
 
 import { usePrintPreview } from "@/components/print-preview-provider";
 import { Button } from "@/components/ui/button";
-import { FileDown, ArrowLeft } from "lucide-react";
+import { FileDown, ArrowLeft, Loader2 } from "lucide-react";
 import Link from 'next/link';
 
 export function PrintNavbar() {
-  const { exportAsPdf } = usePrintPreview();
+  const { exportAsPdf, isLoading } = usePrintPreview();
 
   return (
     <header className="sticky w-full top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
@@ -18,8 +18,13 @@ export function PrintNavbar() {
         <h1 className="text-xl font-bold">Print Preview</h1>
       </div>
       <div className="ml-auto flex items-center gap-2">
-        <Button variant="default" onClick={exportAsPdf}>
-          <FileDown className="mr-2" /> Export as PDF
+        <Button variant="default" onClick={exportAsPdf} disabled={isLoading}>
+          {isLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <FileDown className="mr-2" />
+          )}
+          {isLoading ? 'Exporting...' : 'Export as PDF'}
         </Button>
       </div>
     </header>
