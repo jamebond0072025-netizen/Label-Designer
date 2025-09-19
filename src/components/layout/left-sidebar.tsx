@@ -14,10 +14,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "../ui/button";
-import { Eye, Lock, ChevronUp, ChevronDown, Unlock, PanelLeft, EyeOff, BringToFront, SendToBack } from "lucide-react";
+import { Eye, Lock, Unlock, PanelLeft, EyeOff, BringToFront, SendToBack, Copy } from "lucide-react";
 import { useEditor } from "../editor-provider";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 export function LeftSidebar() {
   const { toggleSidebar, state } = useSidebar();
@@ -25,28 +28,36 @@ export function LeftSidebar() {
     canvasObjects,
     activeObject,
     setActiveObjectById,
-    bringForward,
-    sendBackwards,
+    bringToFront,
+    sendToBack,
     toggleVisibility,
     toggleLock,
+    jsonData,
   } = useEditor();
+  const { toast } = useToast();
 
   // Reverse the array for top-to-bottom layer display
   const reversedLayers = [...canvasObjects].reverse();
   
-  const handleBringForward = (e: React.MouseEvent, id: string) => {
+  const handleBringToFront = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     setActiveObjectById(id);
-    // Timeout to ensure active object is set before action
-    setTimeout(() => bringForward(), 0);
+    bringToFront();
   }
 
-  const handleSendBackwards = (e: React.MouseEvent, id: string) => {
+  const handleSendToBack = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     setActiveObjectById(id);
-    // Timeout to ensure active object is set before action
-    setTimeout(() => sendBackwards(), 0);
+    sendToBack();
   }
+
+  const handleCopyJson = () => {
+    navigator.clipboard.writeText(jsonData);
+    toast({
+        title: "Copied to clipboard!",
+        description: "The JSON data schema has been copied.",
+    });
+  };
 
   return (
     <Sidebar>
@@ -59,83 +70,118 @@ export function LeftSidebar() {
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">
-                    <p>Toggle Layers Panel</p>
+                    <p>Toggle Sidebar</p>
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>
       </SidebarHeader>
       <SidebarContent>
         {state === 'expanded' && (
-            <Accordion type="multiple" defaultValue={["layers"]} className="w-full">
+            <Accordion type="multiple" defaultValue={["layers", "data"]} className="w-full">
             <AccordionItem value="layers">
                 <AccordionTrigger className="px-4">Layers Panel</AccordionTrigger>
                 <AccordionContent className="px-2">
-                <ul className="space-y-1 p-2">
-                    <TooltipProvider>
-                    {reversedLayers.map((layer, index) => {
-                      const isLocked = !!layer.lockMovementX; // Check one lock property as a proxy
-                      return (
-                         <li 
-                            key={layer.id} 
-                            onClick={() => setActiveObjectById(layer.id!)}
-                            className={cn(
-                                "flex items-center justify-between p-2 rounded-md hover:bg-accent/50 text-sm cursor-pointer",
-                                activeObject?.id === layer.id && "bg-accent"
-                            )}
-                         >
-                            <span className="truncate">{layer.name || `Untitled ${layer.type}`}</span>
-                            <div className="flex items-center gap-1">
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); toggleVisibility(layer.id!); }}>
-                                        {layer.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top"><p>{layer.visible ? 'Hide' : 'Show'}</p></TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); toggleLock(layer.id!); }}>
-                                        {isLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top"><p>{isLocked ? 'Unlock' : 'Lock'}</p></TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-6 w-6"
-                                        onClick={(e) => handleBringForward(e, layer.id!)}
-                                        disabled={index === 0}
-                                    >
-                                        <BringToFront className="h-4 w-4" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top"><p>Bring Forward</p></TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                     <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-6 w-6"
-                                        onClick={(e) => handleSendBackwards(e, layer.id!)}
-                                        disabled={index === reversedLayers.length - 1}
-                                    >
-                                        <SendToBack className="h-4 w-4" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top"><p>Send Backward</p></TooltipContent>
-                            </Tooltip>
-                            </div>
-                        </li>
-                      );
-                    })}
-                    </TooltipProvider>
-                </ul>
+                {reversedLayers.length > 0 ? (
+                  <ul className="space-y-1 p-2">
+                      <TooltipProvider>
+                      {reversedLayers.map((layer, index) => {
+                        const isLocked = !!layer.lockMovementX; // Check one lock property as a proxy
+                        return (
+                          <li 
+                              key={layer.id} 
+                              onClick={() => setActiveObjectById(layer.id!)}
+                              className={cn(
+                                  "flex items-center justify-between p-2 rounded-md hover:bg-accent/50 text-sm cursor-pointer",
+                                  activeObject?.id === layer.id && "bg-accent"
+                              )}
+                          >
+                              <span className="truncate">{layer.name || `Untitled ${layer.type}`}</span>
+                              <div className="flex items-center gap-1">
+                              <Tooltip>
+                                  <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); toggleVisibility(layer.id!); }}>
+                                          {layer.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                      </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top"><p>{layer.visible ? 'Hide' : 'Show'}</p></TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                  <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); toggleLock(layer.id!); }}>
+                                          {isLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                                      </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top"><p>{isLocked ? 'Unlock' : 'Lock'}</p></TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                  <TooltipTrigger asChild>
+                                      <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-6 w-6"
+                                          onClick={(e) => handleBringToFront(e, layer.id!)}
+                                          disabled={index === 0}
+                                      >
+                                          <BringToFront className="h-4 w-4" />
+                                      </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top"><p>Bring to Front</p></TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                  <TooltipTrigger asChild>
+                                      <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-6 w-6"
+                                          onClick={(e) => handleSendToBack(e, layer.id!)}
+                                          disabled={index === reversedLayers.length - 1}
+                                      >
+                                          <SendToBack className="h-4 w-4" />
+                                      </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top"><p>Send to Back</p></TooltipContent>
+                              </Tooltip>
+                              </div>
+                          </li>
+                        );
+                      })}
+                      </TooltipProvider>
+                  </ul>
+                ) : (
+                  <div className="text-center text-sm text-muted-foreground p-4">
+                    <p>No elements on canvas.</p>
+                    <p>Add an element to get started.</p>
+                  </div>
+                )}
                 </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="data">
+              <AccordionTrigger className="px-4">Data Schema</AccordionTrigger>
+              <AccordionContent className="px-4 space-y-4">
+                <div>
+                  <Label htmlFor="json-data">Example JSON</Label>
+                  <div className="relative">
+                    <Textarea
+                        id="json-data"
+                        readOnly
+                        className="mt-2 font-mono bg-muted/50"
+                        rows={10}
+                        value={jsonData}
+                    />
+                     <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-3 right-3 h-7 w-7"
+                        onClick={handleCopyJson}
+                      >
+                        <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    This is a read-only example of the JSON data structure your design expects, based on the placeholder elements you've added.
+                  </p>
+                </div>
+              </AccordionContent>
             </AccordionItem>
             </Accordion>
         )}

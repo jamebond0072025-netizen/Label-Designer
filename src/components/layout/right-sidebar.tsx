@@ -18,7 +18,6 @@ import { PropertiesPanel } from '../editor/properties-panel';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
 import {
   Select,
   SelectContent,
@@ -28,11 +27,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PanelRight, ImageUp, Copy } from 'lucide-react';
+import { PanelRight, ImageUp } from 'lucide-react';
 import { useEditor } from '../editor-provider';
 import { predefinedSizes } from '@/lib/predefined-sizes';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { useToast } from '@/hooks/use-toast';
 
 const DPI = 96;
 const MM_TO_IN = 0.0393701;
@@ -44,12 +42,10 @@ export function RightSidebar() {
     setCanvasSize,
     setCanvasBackgroundColor,
     setCanvasBackgroundImage,
-    jsonData,
   } = useEditor();
   const { toggleSidebar, state } = useSidebar();
   const [bgImageUrl, setBgImageUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
 
   const [selectedPreset, setSelectedPreset] = useState('custom');
   const [customWidth, setCustomWidth] = useState(canvas?.getWidth() || 800);
@@ -132,14 +128,6 @@ export function RightSidebar() {
       }
       setUnit(newUnit);
   };
-  
-  const handleCopyJson = () => {
-    navigator.clipboard.writeText(jsonData);
-    toast({
-        title: "Copied to clipboard!",
-        description: "The JSON data schema has been copied.",
-    });
-  };
 
   return (
     <Sidebar side="right">
@@ -161,7 +149,7 @@ export function RightSidebar() {
         {state === 'expanded' && (
           <Accordion
             type="multiple"
-            defaultValue={['properties']}
+            defaultValue={['properties', 'canvas']}
             className="w-full"
           >
             <AccordionItem value="properties">
@@ -310,34 +298,6 @@ export function RightSidebar() {
                       onChange={handleBgImageUpload}
                     />
                   </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="data">
-              <AccordionTrigger className="px-4">Data Schema</AccordionTrigger>
-              <AccordionContent className="px-4 space-y-4">
-                <div>
-                  <Label htmlFor="json-data">Example JSON</Label>
-                  <div className="relative">
-                    <Textarea
-                        id="json-data"
-                        readOnly
-                        className="mt-2 font-mono bg-muted/50"
-                        rows={10}
-                        value={jsonData}
-                    />
-                     <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-3 right-3 h-7 w-7"
-                        onClick={handleCopyJson}
-                      >
-                        <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    This is a read-only example of the JSON data structure your design expects, based on the placeholder elements you've added.
-                  </p>
                 </div>
               </AccordionContent>
             </AccordionItem>
