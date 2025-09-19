@@ -16,14 +16,8 @@ const FabricCanvas = dynamic(() => import('./canvas').then(mod => mod.FabricCanv
 });
 
 export function EditorWorkspace() {
-  const { canvas, zoom, zoomIn, zoomOut, fitToScreen, setContainerRef } = useEditor();
+  const { canvas, zoom, zoomIn, zoomOut, fitToScreen } = useEditor();
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    if (containerRef.current) {
-      setContainerRef(containerRef.current);
-    }
-  }, [setContainerRef]);
 
   useLayoutEffect(() => {
     if (canvas) {
@@ -42,9 +36,11 @@ export function EditorWorkspace() {
     <div className="flex flex-col h-full bg-muted/50 p-4 gap-4 overflow-hidden">
       <Toolbar />
       <div ref={containerRef} className="flex-1 flex items-center justify-center relative overflow-hidden">
-        <Card className="shadow-inner overflow-visible">
-            <FabricCanvas />
-        </Card>
+        <div className="flex items-center justify-center">
+            <Card className="shadow-inner overflow-visible">
+                <FabricCanvas />
+            </Card>
+        </div>
       </div>
        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground text-center">
         <Button variant="ghost" size="icon" onClick={zoomOut}><ZoomOut /></Button>
