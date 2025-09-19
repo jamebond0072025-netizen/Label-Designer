@@ -62,6 +62,17 @@ export function TextProperties({ object, updateObject }: TextPropertiesProps) {
               <SelectItem value="Helvetica">Helvetica</SelectItem>
               <SelectItem value="Times New Roman">Times New Roman</SelectItem>
               <SelectItem value="Courier New">Courier New</SelectItem>
+              <SelectItem value="Inter">Inter</SelectItem>
+              <SelectItem value="Roboto">Roboto</SelectItem>
+              <SelectItem value="Lato">Lato</SelectItem>
+              <SelectItem value="Montserrat">Montserrat</SelectItem>
+              <SelectItem value="Oswald">Oswald</SelectItem>
+              <SelectItem value="Raleway">Raleway</SelectItem>
+              <SelectItem value="Merriweather">Merriweather</SelectItem>
+              <SelectItem value="Playfair Display">Playfair Display</SelectItem>
+              <SelectItem value="Pacifico">Pacifico</SelectItem>
+              <SelectItem value="Lobster">Lobster</SelectItem>
+              <SelectItem value="Roboto Mono">Roboto Mono</SelectItem>
             </SelectContent>
           </Select>
         </div>
