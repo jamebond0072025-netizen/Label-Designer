@@ -474,14 +474,23 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   }, [canvas, activeObject]);
 
   const handleSave = useCallback((templateName: string) => {
-    if (!canvas) return;
-    const canvasJson = canvas.toJSON(CUSTOM_PROPS);
+    if (!canvas || !fabric) return;
+    
+    // Include background image in the JSON
+    const backgroundImage = canvas.backgroundImage;
+    let backgroundImageJSON = null;
+    if (backgroundImage && backgroundImage instanceof fabric.Image) {
+        backgroundImageJSON = backgroundImage.toJSON(CUSTOM_PROPS);
+    }
+
     const data = {
-        canvas: canvasJson,
+        canvas: canvas.toJSON(CUSTOM_PROPS),
         width: canvas.getWidth(),
         height: canvas.getHeight(),
         backgroundColor: canvas.backgroundColor,
-    }
+        backgroundImage: backgroundImageJSON,
+    };
+
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -494,7 +503,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     URL.revokeObjectURL(url);
     toast({ title: "Template Saved!", description: `Saved as ${templateName}.json` });
     setSaveDialogOpen(false);
-  }, [canvas, toast]);
+  }, [canvas, fabric, toast]);
 
   const saveAsJson = () => {
     setSaveDialogOpen(true);
@@ -518,34 +527,52 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         canvas.setDimensions({ width: data.width, height: data.height });
         canvas.backgroundColor = data.backgroundColor;
         
-        canvas.loadFromJSON(data.canvas, () => {
-          canvas.renderAll();
-          updateCanvasObjects(canvas);
-          canvas.getObjects().forEach(obj => {
-            if (obj.get('objectType') === 'barcode') {
-              updateObject(obj.id!, { barcodeValue: obj.get('barcodeValue') });
-            }
-            if (obj.type === 'image' && obj.get('borderRadius')) {
-              updateObject(obj.id!, { borderRadius: obj.get('borderRadius') });
-            }
-          });
-          isRecordingHistory.current = true;
-          saveHistory(canvas);
-          fitToScreen();
-          toast({ title: "Template Loaded!" });
-        }, (o: any, object: FabricType.Object) => {
-            if (object.type === 'image' && o.borderRadius > 0) {
-                const image = object as FabricType.Image;
-                image.clipPath = new fabric.Rect({
-                    left: -image.width! / 2,
-                    top: -image.height! / 2,
-                    rx: o.borderRadius / image.scaleX!,
-                    ry: o.borderRadius / image.scaleY!,
-                    width: image.width,
-                    height: image.height,
+        const loadCanvas = () => {
+            canvas.loadFromJSON(data.canvas, () => {
+              canvas.renderAll();
+              updateCanvasObjects(canvas);
+              canvas.getObjects().forEach(obj => {
+                if (obj.get('objectType') === 'barcode') {
+                  updateObject(obj.id!, { barcodeValue: obj.get('barcodeValue') });
+                }
+                if (obj.type === 'image' && obj.get('borderRadius')) {
+                  updateObject(obj.id!, { borderRadius: obj.get('borderRadius') });
+                }
+              });
+              isRecordingHistory.current = true;
+              saveHistory(canvas);
+              fitToScreen();
+              toast({ title: "Template Loaded!" });
+            }, (o: any, object: FabricType.Object) => {
+                if (object.type === 'image' && o.borderRadius > 0) {
+                    const image = object as FabricType.Image;
+                    image.clipPath = new fabric.Rect({
+                        left: -image.width! / 2,
+                        top: -image.height! / 2,
+                        rx: o.borderRadius / image.scaleX!,
+                        ry: o.borderRadius / image.scaleY!,
+                        width: image.width,
+                        height: image.height,
+                    });
+                }
+            });
+        };
+
+        // Load background image first if it exists
+        if (data.backgroundImage) {
+            fabric.Image.fromObject(data.backgroundImage).then(img => {
+                canvas.setBackgroundImage(img, loadCanvas, {
+                    scaleX: data.width / (img.width || 1),
+                    scaleY: data.height / (img.height || 1),
                 });
-            }
-        });
+            }).catch(e => {
+                console.error("Error loading background image", e);
+                loadCanvas(); // Proceed even if bg image fails
+            });
+        } else {
+            canvas.setBackgroundImage(null, canvas.renderAll.bind(canvas));
+            loadCanvas();
+        }
       };
       reader.readAsText(file);
     };
