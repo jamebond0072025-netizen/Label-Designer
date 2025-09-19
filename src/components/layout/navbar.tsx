@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FileDown, Book } from "lucide-react";
+import { FileDown } from "lucide-react";
 import Link from 'next/link';
 
 export function Navbar() {
@@ -27,12 +27,6 @@ export function Navbar() {
       <div className="flex items-center gap-2">
         <Link href="/" className="text-xl font-bold">LabelForge</Link>
       </div>
-       <nav className="ml-6 flex items-center gap-4 text-sm font-medium">
-        <Link href="/templates" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
-          <Book />
-          Templates
-        </Link>
-      </nav>
       <div className="ml-auto flex items-center gap-2">
         <Button variant="outline" onClick={saveAsJson}>
           Save
