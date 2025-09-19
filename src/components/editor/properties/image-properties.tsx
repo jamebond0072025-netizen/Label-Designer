@@ -29,16 +29,26 @@ export function ImageProperties({ object, updateObject, updateObjectInRealTime }
       updateObject(object.id, { [prop]: value });
     }
   };
+  
+  const handlePropertyChangeInRealTime = (prop: string, value: any) => {
+    if (object.id) {
+      updateObjectInRealTime(object.id, { [prop]: value });
+    }
+  };
 
   const borderRadius = object.get('borderRadius') || 0;
   const maxRadius = Math.min(object.width!, object.height!) / 2;
   const borderRadiusPercentage = maxRadius > 0 ? (borderRadius / maxRadius) * 100 : 0;
 
-  const handleBorderRadiusChange = (percent: number) => {
-    const clampedPercent = Math.max(0, Math.min(100, percent));
+  const handleBorderRadiusChange = (percent: number, isFinal: boolean) => {
+    const clampedPercent = Math.max(0, Math.min(100, isNaN(percent) ? 0 : percent));
     const pixelValue = (clampedPercent / 100) * maxRadius;
     if (object.id) {
-        updateObject(object.id, { borderRadius: pixelValue });
+        if (isFinal) {
+            updateObject(object.id, { borderRadius: pixelValue });
+        } else {
+            updateObjectInRealTime(object.id, { borderRadius: pixelValue });
+        }
     }
   }
 
@@ -64,7 +74,8 @@ export function ImageProperties({ object, updateObject, updateObjectInRealTime }
               type="number"
               min={0} max={100}
               value={Math.round((object.opacity ?? 1) * 100)}
-              onChange={(e) => handlePropertyChange('opacity', parseInt(e.target.value, 10) / 100)}
+              onChange={(e) => handlePropertyChangeInRealTime('opacity', parseInt(e.target.value, 10) / 100)}
+              onBlur={(e) => handlePropertyChange('opacity', parseInt(e.target.value, 10) / 100)}
           />
         </div>
         <div>
@@ -74,7 +85,8 @@ export function ImageProperties({ object, updateObject, updateObjectInRealTime }
               type="number"
               min={0} max={100}
               value={Math.round(borderRadiusPercentage)}
-              onChange={(e) => handleBorderRadiusChange(parseInt(e.target.value, 10))}
+              onChange={(e) => handleBorderRadiusChange(parseInt(e.target.value, 10), false)}
+              onBlur={(e) => handleBorderRadiusChange(parseInt(e.target.value, 10), true)}
           />
         </div>
       </div>
