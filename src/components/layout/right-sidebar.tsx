@@ -40,6 +40,7 @@ export function RightSidebar() {
     activeObject,
     canvas,
     setCanvasSize,
+    fitToScreen,
     setCanvasBackgroundColor,
     setCanvasBackgroundImage,
   } = useEditor();
@@ -92,6 +93,8 @@ export function RightSidebar() {
       const [width, height] = value.split('x').map(Number);
       if (!isNaN(width) && !isNaN(height)) {
         setCanvasSize(width, height);
+        // Delay fitToScreen to allow canvas to resize first
+        setTimeout(() => fitToScreen(), 0);
       }
     }
   };
@@ -132,18 +135,16 @@ export function RightSidebar() {
   return (
     <Sidebar side="right">
       <SidebarHeader>
-        <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-                      <PanelRight />
-                    </Button>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                    <p>Toggle Properties Panel</p>
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+                  <PanelRight />
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+                <p>Toggle Properties Panel</p>
+            </TooltipContent>
+        </Tooltip>
       </SidebarHeader>
       <SidebarContent className="p-0">
         {state === 'expanded' && (
@@ -273,23 +274,21 @@ export function RightSidebar() {
                       onChange={(e) => setBgImageUrl(e.target.value)}
                       onBlur={(e) => setCanvasBackgroundImage(e.target.value)}
                     />
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={triggerFileUpload}
-                                >
-                                  <ImageUp className="h-4 w-4" />
-                                  <span className="sr-only">Upload Image</span>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Upload from device</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={triggerFileUpload}
+                            >
+                              <ImageUp className="h-4 w-4" />
+                              <span className="sr-only">Upload Image</span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Upload from device</p>
+                        </TooltipContent>
+                    </Tooltip>
                     <input
                       type="file"
                       ref={fileInputRef}
