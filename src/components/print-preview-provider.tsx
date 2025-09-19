@@ -36,37 +36,93 @@ const MOCK_TEMPLATE_JSON = {
     "version": "5.3.0",
     "objects": [
         {
-            "type": "textbox", "version": "5.3.0", "originX": "left", "originY": "top", "left": 20, "top": 20, "width": 200, "height": 22.6, "fill": "#000000",
-            "stroke": null, "strokeWidth": 1, "fontFamily": "Inter", "fontSize": 20, "text": "{{text-1}}", "textAlign": "left", "id": "e0a6b2c8", "name": "text-1", "isPlaceholder": true
+            "type": "rect",
+            "version": "5.3.0",
+            "originX": "left",
+            "originY": "top",
+            "left": 174.5,
+            "top": 260,
+            "width": 250,
+            "height": 2,
+            "fill": "#e0e0e0",
+            "stroke": null,
+            "strokeWidth": 1,
+            "id": "separator-line"
         },
         {
-            "type": "image", "version": "5.3.0", "originX": "left", "originY": "top", "left": 20, "top": 50, "width": 200, "height": 75, "id": "a9b3c1d4", "name": "barcode-1",
-            "objectType": "barcode", "barcodeValue": "barcode-1", "isPlaceholder": true
+            "type": "image",
+            "version": "5.3.0",
+            "originX": "left",
+            "originY": "top",
+            "left": 50,
+            "top": 30,
+            "width": 500,
+            "height": 200,
+            "scaleX": 0.8,
+            "scaleY": 0.8,
+            "src": "https://placehold.co/500x250/EFEFEF/AAAAAA?text=Product+Image",
+            "crossOrigin": "anonymous",
+            "id": "c5d8e2f1",
+            "name": "image-1",
+            "isPlaceholder": true
         },
-         {
-            "type": "image", "version": "5.3.0", "originX": "left", "originY": "top", "left": 230, "top": 20, "width": 150, "height": 112.5, "scaleX": 0.75, "scaleY": 0.75,
-            "src": "https://placehold.co/400x300/EFEFEF/AAAAAA?text=image-1", "crossOrigin": "anonymous", "id": "c5d8e2f1", "name": "image-1", "isPlaceholder": true
+        {
+            "type": "textbox",
+            "version": "5.3.0",
+            "originX": "left",
+            "originY": "top",
+            "left": 100,
+            "top": 210,
+            "width": 400,
+            "height": 45.2,
+            "fill": "#333333",
+            "stroke": null,
+            "strokeWidth": 1,
+            "fontFamily": "Helvetica",
+            "fontWeight": "bold",
+            "fontSize": 40,
+            "text": "{{text-1}}",
+            "textAlign": "center",
+            "id": "e0a6b2c8",
+            "name": "text-1",
+            "isPlaceholder": true
+        },
+        {
+            "type": "image",
+            "version": "5.3.0",
+            "originX": "left",
+            "originY": "top",
+            "left": 150,
+            "top": 280,
+            "width": 300,
+            "height": 90,
+            "id": "a9b3c1d4",
+            "name": "barcode-1",
+            "objectType": "barcode",
+            "barcodeValue": "barcode-1",
+            "isPlaceholder": true
         }
     ],
-    "width": 400, "height": 150
+    "width": 600,
+    "height": 400
 };
 
 const MOCK_JSON_DATA = [
-    { "text-1": "First Item", "barcode-1": "123456789012", "image-1": "https://picsum.photos/seed/1/400/300" },
-    { "text-1": "Second Item", "barcode-1": "987654321098", "image-1": "https://picsum.photos/seed/2/400/300" },
-    { "text-1": "Third Item", "barcode-1": "112233445566", "image-1": "https://picsum.photos/seed/3/400/300" },
-    { "text-1": "Fourth Item", "barcode-1": "778899001122", "image-1": "https://picsum.photos/seed/4/400/300" },
-    { "text-1": "Fifth Item", "barcode-1": "334455667788", "image-1": "https://picsum.photos/seed/5/400/300" },
-    { "text-1": "Sixth Item", "barcode-1": "990011223344", "image-1": "https://picsum.photos/seed/6/400/300" },
-    { "text-1": "Seventh Item", "barcode-1": "556677889900", "image-1": "https://picsum.photos/seed/7/400/300" },
-    { "text-1": "Eighth Item", "barcode-1": "121212121212", "image-1": "https://picsum.photos/seed/8/400/300" },
-    { "text-1": "Ninth Item", "barcode-1": "343434343434", "image-1": "https://picsum.photos/seed/9/400/300" },
-    { "text-1": "Tenth Item", "barcode-1": "565656565656", "image-1": "https://picsum.photos/seed/10/400/300" },
-    { "text-1": "Eleventh Item", "barcode-1": "123456789012", "image-1": "https://picsum.photos/seed/11/400/300" },
-    { "text-1": "Twelfth Item", "barcode-1": "987654321098", "image-1": "https://picsum.photos/seed/12/400/300" },
-    { "text-1": "Thirteenth Item", "barcode-1": "112233445566", "image-1": "https://picsum.photos/seed/13/400/300" },
-    { "text-1": "Fourteenth Item", "barcode-1": "778899001122", "image-1": "https://picsum.photos/seed/14/400/300" },
-    { "text-1": "Fifteenth Item", "barcode-1": "334455667788", "image-1": "https://picsum.photos/seed/15/400/300" }
+    { "text-1": "Classic Leather Wallet", "barcode-1": "123456789012", "image-1": "https://picsum.photos/seed/product1/500/250" },
+    { "text-1": "Stainless Steel Watch", "barcode-1": "987654321098", "image-1": "https://picsum.photos/seed/product2/500/250" },
+    { "text-1": "Organic Green Tea", "barcode-1": "112233445566", "image-1": "https://picsum.photos/seed/product3/500/250" },
+    { "text-1": "Wireless Headphones", "barcode-1": "778899001122", "image-1": "https://picsum.photos/seed/product4/500/250" },
+    { "text-1": "Scented Soy Candle", "barcode-1": "334455667788", "image-1": "https://picsum.photos/seed/product5/500/250" },
+    { "text-1": "Handmade Ceramic Mug", "barcode-1": "990011223344", "image-1": "https://picsum.photos/seed/product6/500/250" },
+    { "text-1": "Gourmet Coffee Beans", "barcode-1": "556677889900", "image-1": "https://picsum.photos/seed/product7/500/250" },
+    { "text-1": "Plush Cotton Towel", "barcode-1": "121212121212", "image-1": "https://picsum.photos/seed/product8/500/250" },
+    { "text-1": "Yoga Mat", "barcode-1": "343434343434", "image-1": "https://picsum.photos/seed/product9/500/250" },
+    { "text-1": "Eco-Friendly Water Bottle", "barcode-1": "565656565656", "image-1": "https://picsum.photos/seed/product10/500/250" },
+    { "text-1": "Silk Sleep Mask", "barcode-1": "123456789012", "image-1": "https://picsum.photos/seed/product11/500/250" },
+    { "text-1": "Artisan Chocolate Bar", "barcode-1": "987654321098", "image-1": "https://picsum.photos/seed/product12/500/250" },
+    { "text-1": "Bamboo Toothbrush Set", "barcode-1": "112233445566", "image-1": "https://picsum.photos/seed/product13/500/250" },
+    { "text-1": "Leather Bound Journal", "barcode-1": "778899001122", "image-1": "https://picsum.photos/seed/product14/500/250" },
+    { "text-1": "Miniature Desk Plant", "barcode-1": "334455667788", "image-1": "https://picsum.photos/seed/product15/500/250" }
 ];
 
 export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
@@ -94,6 +150,68 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const renderLabels = useCallback(async () => {
+    if (!canvas || !fabric || !isCanvasInitialized) return;
+    setIsLoading(true);
+    canvas.clear();
+
+    const templateJson = MOCK_TEMPLATE_JSON;
+    const data = MOCK_JSON_DATA;
+
+    const scaledWidth = templateJson.width * settings.scale;
+    const scaledHeight = templateJson.height * settings.scale;
+    
+    let currentX = settings.marginLeft;
+    let currentY = settings.marginTop;
+
+    const labelsToRender = showRealData ? data.length : 50; 
+    let placeholderRect: FabricType.Rect | null = null;
+    
+    if (!showRealData) {
+        placeholderRect = new fabric.Rect({
+            width: scaledWidth,
+            height: scaledHeight,
+            fill: '#f0f0f0',
+            stroke: '#cccccc',
+            strokeDashArray: [5, 5],
+            selectable: false,
+            evented: false,
+        });
+    }
+
+    for (let i = 0; i < labelsToRender; i++) {
+        if (currentY + scaledHeight > canvas.getHeight()) {
+            break; 
+        }
+
+        if (showRealData) {
+            const record = data[i];
+            if (!record) continue;
+            
+            const labelImage = await createLabelAsImage(fabric, templateJson, record);
+            labelImage.scaleToWidth(scaledWidth);
+            labelImage.set({ left: currentX, top: currentY, selectable: false, evented: false });
+            canvas.add(labelImage);
+        } else {
+            if (placeholderRect) {
+                const placeholderClone = await new Promise<FabricType.Rect>(resolve => placeholderRect!.clone(resolve));
+                placeholderClone.set({ left: currentX, top: currentY });
+                canvas.add(placeholderClone);
+            }
+        }
+
+        currentX += scaledWidth + settings.gapHorizontal;
+
+        if (currentX + scaledWidth > canvas.getWidth()) {
+            currentX = settings.marginLeft;
+            currentY += scaledHeight + settings.gapVertical;
+        }
+    }
+    
+    canvas.renderAll();
+    setIsLoading(false);
+  }, [canvas, fabric, settings, showRealData, isCanvasInitialized]);
+  
   const initCanvas = useCallback((el: HTMLCanvasElement, container: HTMLDivElement) => {
     if (!fabric || isCanvasInitialized) return;
 
@@ -164,71 +282,6 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
   
-  const renderLabels = useCallback(async () => {
-    if (!canvas || !fabric) return;
-    setIsLoading(true);
-    canvas.clear();
-
-    const templateJson = MOCK_TEMPLATE_JSON;
-    const data = MOCK_JSON_DATA;
-
-    const scaledWidth = templateJson.width * settings.scale;
-    const scaledHeight = templateJson.height * settings.scale;
-    
-    let currentX = settings.marginLeft;
-    let currentY = settings.marginTop;
-
-    const labelsToRender = showRealData ? data.length : 50; 
-    let masterLabelImage: FabricType.Image | null = null;
-    let placeholderRect: FabricType.Rect | null = null;
-    
-    if (showRealData && data.length > 0) {
-        // Since each label is unique, we can't use a master image.
-    } else {
-        placeholderRect = new fabric.Rect({
-            width: scaledWidth,
-            height: scaledHeight,
-            fill: '#f0f0f0',
-            stroke: '#cccccc',
-            strokeDashArray: [5, 5],
-            selectable: false,
-            evented: false,
-        });
-    }
-
-    for (let i = 0; i < labelsToRender; i++) {
-        if (currentY + scaledHeight > canvas.getHeight()) {
-            break; 
-        }
-
-        if (showRealData) {
-            const record = data[i];
-            if (!record) continue;
-            
-            const labelImage = await createLabelAsImage(fabric, templateJson, record);
-            labelImage.scaleToWidth(scaledWidth);
-            labelImage.set({ left: currentX, top: currentY, selectable: false, evented: false });
-            canvas.add(labelImage);
-        } else {
-            if (placeholderRect) {
-                const placeholderClone = await new Promise<FabricType.Rect>(resolve => placeholderRect!.clone(resolve));
-                placeholderClone.set({ left: currentX, top: currentY });
-                canvas.add(placeholderClone);
-            }
-        }
-
-        currentX += scaledWidth + settings.gapHorizontal;
-
-        if (currentX + scaledWidth > canvas.getWidth()) {
-            currentX = settings.marginLeft;
-            currentY += scaledHeight + settings.gapVertical;
-        }
-    }
-    
-    canvas.renderAll();
-    setIsLoading(false);
-  }, [canvas, fabric, settings, showRealData, createLabelAsImage]);
-
   useEffect(() => {
     if (fabric && canvas) {
         const pageSize = predefinedSizes.find(s => s.name.startsWith(settings.pageSize));
@@ -237,8 +290,8 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
         if (canvas.getWidth() !== width || canvas.getHeight() !== height) {
             canvas.setDimensions({ width, height });
         }
-        renderLabels();
     }
+    renderLabels();
   }, [settings, showRealData, fabric, canvas, renderLabels]);
 
   const exportAsPdf = async () => {
@@ -255,23 +308,14 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
       unit: 'px',
       format: [pageW, pageH]
     });
-    pdf.deletePage(1); // Remove default blank page
+    pdf.deletePage(1);
 
     let dataToProcess = [...MOCK_JSON_DATA];
     let isFirstPage = true;
 
     while(dataToProcess.length > 0) {
-        if (!isFirstPage) {
-          pdf.addPage([pageW, pageH], pageW > pageH ? 'l' : 'p');
-        } else {
-          // For the first page, jspdf adds one by default if we delete the initial one.
-          // If we are going to add pages, let's start with a clean slate.
-          // This logic seems a bit redundant after deleting page 1, but jspdf can be quirky.
-          // A safer approach is to manage page adding explicitly.
-          pdf.addPage([pageW, pageH], pageW > pageH ? 'l' : 'p');
-          isFirstPage = false;
-        }
-
+        pdf.addPage([pageW, pageH], pageW > pageH ? 'l' : 'p');
+        
         const pageCanvas = new fabric.StaticCanvas(null, {
             width: pageW,
             height: pageH,
@@ -285,9 +329,8 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
         const scaledHeight = MOCK_TEMPLATE_JSON.height * settings.scale;
 
         while(dataToProcess.length > 0) {
-            // Check if the next label fits on the current page
             if (currentY + scaledHeight > pageH) {
-                break; // Move to the next page
+                break;
             }
             
             const record = dataToProcess.shift();
@@ -347,5 +390,3 @@ export const usePrintPreview = () => {
   }
   return context;
 };
-
-    
