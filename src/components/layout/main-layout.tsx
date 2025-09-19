@@ -16,7 +16,7 @@ export function MainLayout() {
         <div className="flex flex-col h-screen bg-background">
           <Navbar />
           <div className="flex flex-1 overflow-hidden">
-            <SidebarProvider id="left-sidebar" defaultOpen={true}>
+            <SidebarProvider id="left-sidebar" defaultOpen={false}>
               <LeftSidebar />
             </SidebarProvider>
             <main className="flex-1 flex flex-col overflow-auto">
