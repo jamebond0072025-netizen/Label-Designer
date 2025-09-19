@@ -3,7 +3,6 @@
 
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import type { fabric as FabricType } from 'fabric';
-import { useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import JsBarcode from 'jsbarcode';
@@ -27,7 +26,7 @@ interface PrintPreviewContextType {
   setSettings: React.Dispatch<React.SetStateAction<PrintSettings>>;
   exportAsPdf: () => void;
   isLoading: boolean;
-  jsonData: string;
+  jsonData: Record<string, string>[];
 }
 
 const PrintPreviewContext = createContext<PrintPreviewContextType | undefined>(undefined);
@@ -147,14 +146,11 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
         backgroundColor: 'transparent',
     });
 
-    // Add the rendered label to the container (it will be clipped if larger)
-    labelCanvas.cloneAsImage((img) => {
-        img.set({ left: 0, top: 0 });
-        containerCanvas.add(img);
-        containerCanvas.renderAll();
+    const dataURL = labelCanvas.toDataURL({
+        format: 'png',
+        width: targetWidth,
+        height: targetHeight,
     });
-
-    const dataURL = containerCanvas.toDataURL({ format: 'png' });
     
     labelCanvas.dispose();
     containerCanvas.dispose();
@@ -165,7 +161,7 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
       }, { crossOrigin: 'anonymous' });
     });
   }, []);
-
+  
   const renderLabels = useCallback(async () => {
     if (!canvas || !fabric) return;
     setIsLoading(true);
@@ -176,7 +172,7 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     const sampleRecord: Record<string, string> = {};
     templateJson.objects.forEach((obj: any) => {
         if (obj.isPlaceholder && obj.name) {
-             sampleRecord[obj.name] = `{{${obj.name}}}`;
+             sampleRecord[obj.name] = obj.name;
         }
     });
 
@@ -185,9 +181,18 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     let currentX = settings.marginLeft;
     let currentY = settings.marginTop;
 
-    while (currentY + settings.labelHeight <= canvas.height!) {
-        while (currentX + settings.labelWidth <= canvas.width!) {
-            await new Promise<void>(resolve => {
+    const labelsPerPage = { x: 0, y: 0 };
+    if (settings.labelWidth > 0) {
+        labelsPerPage.x = Math.floor((canvas.width! - settings.marginLeft) / (settings.labelWidth + settings.gapHorizontal));
+    }
+    if (settings.labelHeight > 0) {
+        labelsPerPage.y = Math.floor((canvas.height! - settings.marginTop) / (settings.labelHeight + settings.gapVertical));
+    }
+    
+    for (let row = 0; row < labelsPerPage.y; row++) {
+        currentX = settings.marginLeft;
+        for (let col = 0; col < labelsPerPage.x; col++) {
+             await new Promise<void>(resolve => {
                 singleLabelImage.clone((clonedImg: FabricType.Image) => {
                     clonedImg.set({ left: currentX, top: currentY, selectable: false, evented: false });
                     canvas.add(clonedImg);
@@ -196,24 +201,25 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
             });
             currentX += settings.labelWidth + settings.gapHorizontal;
         }
-        currentX = settings.marginLeft;
         currentY += settings.labelHeight + settings.gapVertical;
     }
-
-
+    
     canvas.renderAll();
     setIsLoading(false);
   }, [canvas, fabric, settings, createLabelAsImage]);
 
   useEffect(() => {
     if (canvas && fabric) {
-        const pageSize = predefinedSizes.find(s => s.name.startsWith(settings.pageSize));
-        const width = pageSize ? pageSize.width : 794;
-        const height = pageSize ? pageSize.height : 1122;
+      const pageSize = predefinedSizes.find(s => s.name.startsWith(settings.pageSize));
+      const width = pageSize ? pageSize.width : 794;
+      const height = pageSize ? pageSize.height : 1122;
+      if (canvas.getWidth() !== width || canvas.getHeight() !== height) {
         canvas.setDimensions({ width, height });
-        renderLabels();
+      }
+      renderLabels();
     }
   }, [settings, canvas, fabric, renderLabels]);
+
 
   const exportAsPdf = async () => {
     if (!fabric) return;
@@ -229,16 +235,14 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
       unit: 'px',
       format: [pageW, pageH]
     });
-    pdf.deletePage(1); // Start with a clean slate
+    pdf.deletePage(1);
 
     let dataToProcess = [...MOCK_JSON_DATA];
     let pageNumber = 0;
 
     while(dataToProcess.length > 0) {
         pageNumber++;
-        if (pageNumber > 1) {
-            pdf.addPage([pageW, pageH], pageW > pageH ? 'l' : 'p');
-        }
+        pdf.addPage([pageW, pageH], pageW > pageH ? 'l' : 'p');
 
         const pageCanvas = new fabric.StaticCanvas(null, {
             width: pageW,
@@ -248,9 +252,9 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
 
         let currentX = settings.marginLeft;
         let currentY = settings.marginTop;
-        let canFitMore = true;
+        let canFitMoreOnPage = true;
 
-        while(canFitMore && dataToProcess.length > 0) {
+        while(canFitMoreOnPage && dataToProcess.length > 0) {
             const record = dataToProcess.shift();
             if (!record) continue;
 
@@ -263,7 +267,7 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
                 currentX = settings.marginLeft;
                 currentY += settings.labelHeight + settings.gapVertical;
                 if (currentY + settings.labelHeight > pageH) {
-                    canFitMore = false;
+                    canFitMoreOnPage = false;
                 }
             }
         }
@@ -286,7 +290,7 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     setSettings,
     exportAsPdf,
     isLoading,
-    jsonData: JSON.stringify(MOCK_JSON_DATA, null, 2),
+    jsonData: MOCK_JSON_DATA,
   };
 
   return (
