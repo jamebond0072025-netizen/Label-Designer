@@ -1,3 +1,4 @@
+
 "use client";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -13,7 +14,7 @@ export function MainLayout() {
       <div className="flex flex-col h-screen bg-background">
         <Navbar />
         <div className="flex flex-1 overflow-hidden">
-          <SidebarProvider id="left-sidebar">
+          <SidebarProvider id="left-sidebar" defaultOpen={false}>
             <LeftSidebar />
           </SidebarProvider>
           <main className="flex-1 flex flex-col overflow-auto">
