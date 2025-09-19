@@ -6,7 +6,7 @@ import { Toolbar } from './toolbar';
 import { Card } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
 import { useEditor } from '../editor-provider';
-import React, { useRef, useLayoutEffect, useCallback } from 'react';
+import React, { useRef, useLayoutEffect } from 'react';
 import { Button } from '../ui/button';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 
@@ -16,11 +16,17 @@ const FabricCanvas = dynamic(() => import('./canvas').then(mod => mod.FabricCanv
 });
 
 export function EditorWorkspace() {
-  const { canvas, zoom, zoomIn, zoomOut, fitToScreen } = useEditor();
+  const { canvas, zoom, zoomIn, zoomOut, fitToScreen, setContainerRef } = useEditor();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (canvas && containerRef.current) {
+    if (containerRef.current) {
+      setContainerRef(containerRef.current);
+    }
+  }, [setContainerRef]);
+
+  useLayoutEffect(() => {
+    if (canvas) {
       fitToScreen();
       
       const handleResize = () => fitToScreen();
@@ -35,8 +41,8 @@ export function EditorWorkspace() {
   return (
     <div className="flex flex-col h-full bg-muted/50 p-4 gap-4 overflow-hidden">
       <Toolbar />
-      <div className="flex-1 flex items-center justify-center relative">
-        <Card ref={containerRef} className="shadow-inner w-full h-full overflow-hidden">
+      <div ref={containerRef} className="flex-1 flex items-center justify-center relative overflow-hidden">
+        <Card className="shadow-inner overflow-visible">
             <FabricCanvas />
         </Card>
       </div>
