@@ -14,6 +14,24 @@ interface TextPropertiesProps {
   updateObject: (id: string, properties: any) => void;
 }
 
+const fontFamilies = [
+  "Arial",
+  "Helvetica",
+  "Times New Roman",
+  "Courier New",
+  "Inter",
+  "Roboto",
+  "Lato",
+  "Montserrat",
+  "Oswald",
+  "Raleway",
+  "Merriweather",
+  "Playfair Display",
+  "Pacifico",
+  "Lobster",
+  "Roboto Mono"
+];
+
 export function TextProperties({ object, updateObject }: TextPropertiesProps) {
   
   const handlePropertyChange = (prop: string, value: any) => {
@@ -58,21 +76,11 @@ export function TextProperties({ object, updateObject }: TextPropertiesProps) {
               <SelectValue placeholder="Select font" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Arial">Arial</SelectItem>
-              <SelectItem value="Helvetica">Helvetica</SelectItem>
-              <SelectItem value="Times New Roman">Times New Roman</SelectItem>
-              <SelectItem value="Courier New">Courier New</SelectItem>
-              <SelectItem value="Inter">Inter</SelectItem>
-              <SelectItem value="Roboto">Roboto</SelectItem>
-              <SelectItem value="Lato">Lato</SelectItem>
-              <SelectItem value="Montserrat">Montserrat</SelectItem>
-              <SelectItem value="Oswald">Oswald</SelectItem>
-              <SelectItem value="Raleway">Raleway</SelectItem>
-              <SelectItem value="Merriweather">Merriweather</SelectItem>
-              <SelectItem value="Playfair Display">Playfair Display</SelectItem>
-              <SelectItem value="Pacifico">Pacifico</SelectItem>
-              <SelectItem value="Lobster">Lobster</SelectItem>
-              <SelectItem value="Roboto Mono">Roboto Mono</SelectItem>
+              {fontFamilies.map((font) => (
+                <SelectItem key={font} value={font} style={{ fontFamily: font }}>
+                  {font}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
