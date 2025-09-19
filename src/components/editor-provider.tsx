@@ -342,7 +342,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   }, [canvas, fabric, toast]);
 
  const updateObject = useCallback((id: string, properties: any) => {
-    if (!canvas) return;
+    if (!canvas || !fabric) return;
     const obj = canvas.getObjects().find((o) => o.id === id);
     if (obj) {
         // If the key (name) is being changed for a placeholder
@@ -386,7 +386,11 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             toast({ title: "Invalid barcode data", variant: "destructive" });
          }
       } else {
-        obj.set(properties);
+        if (properties.shadow) {
+            obj.set('shadow', new fabric.Shadow(properties.shadow));
+        } else {
+            obj.set(properties);
+        }
 
         if (properties.width !== undefined) {
             obj.scaleToWidth(properties.width);
@@ -402,7 +406,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         setActiveObject(obj);
       }
     }
-  }, [canvas, toast, updateCanvasObjects, saveHistory]);
+  }, [canvas, fabric, toast, updateCanvasObjects, saveHistory]);
   
   const deleteActiveObject = useCallback(() => {
     if (!canvas || !activeObject) return;
@@ -785,3 +789,5 @@ export const useEditor = () => {
   }
   return context;
 };
+
+    
