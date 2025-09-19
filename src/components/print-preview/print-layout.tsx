@@ -18,7 +18,7 @@ function PrintLayoutContent() {
                 <div className="flex flex-col h-screen bg-background">
                     <PrintNavbar />
                     <div className="flex flex-1 overflow-hidden">
-                        <SidebarProvider id="print-left-sidebar" defaultOpen={true}>
+                        <SidebarProvider id="print-left-sidebar" defaultOpen={false}>
                             <PrintLeftSidebar />
                         </SidebarProvider>
                         <main className="flex-1 flex flex-col overflow-auto">
