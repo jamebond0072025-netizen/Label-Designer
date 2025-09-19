@@ -10,9 +10,10 @@ import { Separator } from '@/components/ui/separator';
 interface ImagePropertiesProps {
   object: fabric.Image;
   updateObject: (id: string, properties: any) => void;
+  updateObjectInRealTime: (id: string, properties: any) => void;
 }
 
-export function ImageProperties({ object, updateObject }: ImagePropertiesProps) {
+export function ImageProperties({ object, updateObject, updateObjectInRealTime }: ImagePropertiesProps) {
   
   const handleUrlChange = (newUrl: string) => {
     if (object.id) {
@@ -29,15 +30,7 @@ export function ImageProperties({ object, updateObject }: ImagePropertiesProps) 
       updateObject(object.id, { [prop]: value });
     }
   };
-  
-  const handleShadowPropertyChange = (prop: string, value: any) => {
-    if (object.id) {
-      const shadowProperties = { [prop]: value };
-      updateObject(object.id, { shadow: shadowProperties });
-    }
-  };
 
-  const shadow = object.shadow as fabric.Shadow;
   const borderRadius = object.get('borderRadius') || 0;
 
   return (
@@ -60,7 +53,8 @@ export function ImageProperties({ object, updateObject }: ImagePropertiesProps) 
             id="image-opacity"
             min={0} max={1} step={0.01} 
             value={[object.opacity ?? 1]} 
-            onValueChange={(value) => handlePropertyChange('opacity', value[0])}
+            onValueChange={(value) => updateObjectInRealTime(object.id!, { opacity: value[0] })}
+            onValueChangeCommit={(value) => handlePropertyChange('opacity', value[0])}
         />
       </div>
        <Separator />
@@ -70,7 +64,8 @@ export function ImageProperties({ object, updateObject }: ImagePropertiesProps) 
             id="image-border-radius"
             min={0} max={Math.min(object.width!, object.height!) / 2} step={1} 
             value={[borderRadius]} 
-            onValueChange={(value) => handlePropertyChange('borderRadius', value[0])}
+            onValueChange={(value) => updateObjectInRealTime(object.id!, { borderRadius: value[0] })}
+            onValueChangeCommit={(value) => handlePropertyChange('borderRadius', value[0])}
         />
       </div>
       <Separator />
@@ -93,49 +88,6 @@ export function ImageProperties({ object, updateObject }: ImagePropertiesProps) 
               value={object.strokeWidth || 0}
               onChange={(e) => handlePropertyChange('strokeWidth', parseInt(e.target.value, 10))}
           />
-        </div>
-      </div>
-      <Separator />
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium">Shadow</h3>
-        <div>
-          <Label htmlFor="shadow-color">Color</Label>
-          <Input 
-            id="shadow-color"
-            type="color"
-            value={shadow?.color || '#000000'}
-            onChange={(e) => handleShadowPropertyChange('color', e.target.value)}
-            className="p-1"
-          />
-        </div>
-        <div>
-          <Label htmlFor="shadow-blur">Blur</Label>
-          <Slider
-            id="shadow-blur"
-            min={0} max={50} step={1}
-            value={[shadow?.blur || 0]}
-            onValueChange={(val) => handleShadowPropertyChange('blur', val[0])}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label htmlFor="shadow-offset-x">Offset X</Label>
-            <Input 
-              id="shadow-offset-x"
-              type="number"
-              value={shadow?.offsetX || 0}
-              onChange={(e) => handleShadowPropertyChange('offsetX', parseInt(e.target.value, 10))}
-            />
-          </div>
-          <div>
-            <Label htmlFor="shadow-offset-y">Offset Y</Label>
-            <Input 
-              id="shadow-offset-y"
-              type="number"
-              value={shadow?.offsetY || 0}
-              onChange={(e) => handleShadowPropertyChange('offsetY', parseInt(e.target.value, 10))}
-            />
-          </div>
         </div>
       </div>
     </div>

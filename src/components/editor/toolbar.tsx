@@ -193,22 +193,6 @@ export function Toolbar() {
             <p>Align Bottom</p>
           </TooltipContent>
         </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={bringToFront} disabled={!isObjectSelected}><BringToFront /></Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Bring to Front</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={sendToBack} disabled={!isObjectSelected}><SendToBack /></Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Send to Back</p>
-          </TooltipContent>
-        </Tooltip>
       </div>
 
     </div>

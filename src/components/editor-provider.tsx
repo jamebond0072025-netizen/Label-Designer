@@ -26,6 +26,7 @@ interface EditorContextType {
   initCanvas: (el: HTMLCanvasElement, container: HTMLDivElement) => void;
   addObject: (type: AddObjectType) => void;
   updateObject: (id: string, properties: any) => void;
+  updateObjectInRealTime: (id: string, properties: any) => void;
   deleteActiveObject: () => void;
   fabric: typeof FabricType | null;
   saveAsJson: () => void;
@@ -341,24 +342,64 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [canvas, fabric, toast]);
 
+  const applyObjectProperties = useCallback((obj: FabricType.Object, properties: any) => {
+    if (!fabric) return;
+    
+    if (properties.borderRadius !== undefined && obj.type === 'image') {
+        const image = obj as FabricType.Image;
+        const radius = properties.borderRadius;
+        image.set('borderRadius', radius); // Store for state management
+        
+        if (radius > 0) {
+            image.clipPath = new fabric.Rect({
+                left: -image.width! / 2,
+                top: -image.height! / 2,
+                rx: radius / image.scaleX!,
+                ry: radius / image.scaleY!,
+                width: image.width,
+                height: image.height,
+            });
+        } else {
+            image.clipPath = undefined;
+        }
+        delete properties.borderRadius;
+    }
+    
+    obj.set(properties);
+    
+    if (properties.width !== undefined) {
+        obj.scaleToWidth(properties.width);
+    }
+    if (properties.height !== undefined) {
+        obj.scaleToHeight(properties.height);
+    }
+  }, [fabric]);
+
+
+  const updateObjectInRealTime = useCallback((id: string, properties: any) => {
+      if (!canvas) return;
+      const obj = canvas.getObjects().find((o) => o.id === id);
+      if (obj) {
+          applyObjectProperties(obj, properties);
+          canvas.renderAll();
+      }
+  }, [canvas, applyObjectProperties]);
+
  const updateObject = useCallback((id: string, properties: any) => {
     if (!canvas || !fabric) return;
     const obj = canvas.getObjects().find((o) => o.id === id);
     if (obj) {
-        // If the key (name) is being changed for a placeholder
         if (properties.name && obj.get('isPlaceholder')) {
             const newKey = properties.name;
             const isNameTaken = canvas.getObjects().some(o => o.name === newKey && o.id !== id);
             
             if(isNameTaken) {
                 toast({ title: "Key already exists", description: "Please use a unique key for each placeholder.", variant: "destructive" });
-                // Force a re-render of properties panel to show the original value
                 setActiveObject(null);
                 setActiveObject(obj);
                 return;
             }
 
-            // If it's a textbox, update the text to match the new key
             if (obj.type === 'textbox') {
                 (obj as FabricType.Textbox).set('text', `{{${newKey}}}`);
             }
@@ -386,49 +427,15 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             toast({ title: "Invalid barcode data", variant: "destructive" });
          }
       } else {
-        if (properties.shadow && obj.shadow) {
-            // If shadow exists, update its properties
-            obj.shadow.set(properties.shadow);
-            delete properties.shadow;
-        }
-
-        if (properties.borderRadius !== undefined && obj.type === 'image') {
-            const image = obj as FabricType.Image;
-            const radius = properties.borderRadius;
-            image.set('borderRadius', radius); // Store for state management
-            
-            if (radius > 0) {
-                image.clipPath = new fabric.Rect({
-                    left: -image.width! / 2,
-                    top: -image.height! / 2,
-                    rx: radius / image.scaleX!,
-                    ry: radius / image.scaleY!,
-                    width: image.width,
-                    height: image.height,
-                });
-            } else {
-                image.clipPath = undefined;
-            }
-            delete properties.borderRadius;
-        }
-        
-        obj.set(properties);
-        
-        if (properties.width !== undefined) {
-            obj.scaleToWidth(properties.width);
-        }
-        if (properties.height !== undefined) {
-            obj.scaleToHeight(properties.height);
-        }
-        
+        applyObjectProperties(obj, properties);
         canvas.renderAll();
         saveHistory(canvas);
         updateCanvasObjects(canvas);
-        setActiveObject(null); // Force re-render of properties panel
+        setActiveObject(null); 
         setActiveObject(obj);
       }
     }
-  }, [canvas, fabric, toast, updateCanvasObjects, saveHistory]);
+  }, [canvas, fabric, toast, updateCanvasObjects, saveHistory, applyObjectProperties]);
   
   const deleteActiveObject = useCallback(() => {
     if (!canvas || !activeObject) return;
@@ -485,7 +492,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
           saveHistory(canvas);
           toast({ title: "Template Loaded!" });
         }, (o: any, object: FabricType.Object) => {
-             // This is a reviver function that runs for each object loaded
             if (object.type === 'image' && o.borderRadius > 0) {
                 const image = object as FabricType.Image;
                 image.clipPath = new fabric.Rect({
@@ -533,20 +539,17 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const exportCanvas = (format: 'png' | 'jpeg' | 'pdf') => {
     if (!canvas) return;
 
-    // Save current state
     const currentZoom = canvas.getZoom();
     const currentVpt = canvas.viewportTransform;
 
-    // Reset zoom and viewport for export
     canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
     
     const dataUrl = canvas.toDataURL({
       format: format === 'pdf' ? 'png' : format,
       quality: 1,
-      multiplier: 2 // Export at 2x resolution for better quality
+      multiplier: 2
     });
 
-    // Restore canvas state
     if (currentVpt) {
       canvas.setZoom(currentZoom);
       canvas.setViewportTransform(currentVpt);
@@ -675,7 +678,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     setZoom(newZoom);
     canvas.setZoom(newZoom);
 
-    // Center the viewport
     const vpt = canvas.viewportTransform;
     if (vpt) {
         vpt[4] = (container.clientWidth - canvasWidth * newZoom) / 2;
@@ -773,6 +775,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     initCanvas,
     addObject,
     updateObject,
+    updateObjectInRealTime,
     deleteActiveObject,
     fabric,
     saveAsJson,

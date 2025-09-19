@@ -12,7 +12,7 @@ import { BarcodeProperties } from './properties/barcode-properties';
 import { ImageProperties } from './properties/image-properties';
 
 export function PropertiesPanel() {
-  const { activeObject, updateObject, deleteActiveObject } = useEditor();
+  const { activeObject, updateObject, updateObjectInRealTime, deleteActiveObject } = useEditor();
 
   if (!activeObject) {
     return (
@@ -35,7 +35,7 @@ export function PropertiesPanel() {
         if (activeObject.get('objectType') === 'barcode') {
           return <BarcodeProperties object={activeObject} updateObject={updateObject} />;
         }
-        return <ImageProperties object={activeObject as fabric.Image} updateObject={updateObject} />;
+        return <ImageProperties object={activeObject as fabric.Image} updateObject={updateObject} updateObjectInRealTime={updateObjectInRealTime} />;
       default:
         return (
           <div className="text-sm text-muted-foreground">
