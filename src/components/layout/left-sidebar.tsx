@@ -14,13 +14,34 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "../ui/button";
-import { Eye, Lock, Unlock, PanelLeft, EyeOff, BringToFront, SendToBack, Copy } from "lucide-react";
+import { Eye, Lock, Unlock, PanelLeft, EyeOff, BringToFront, SendToBack, Copy, Type, RectangleHorizontal, Circle, ImageIcon, Barcode, HelpCircle } from "lucide-react";
 import { useEditor } from "../editor-provider";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import type { fabric } from 'fabric';
+
+const getIconForLayer = (layer: fabric.Object) => {
+  const objectType = layer.type;
+  switch (objectType) {
+    case 'textbox':
+      return <Type className="h-5 w-5" />;
+    case 'rect':
+      return <RectangleHorizontal className="h-5 w-5" />;
+    case 'circle':
+      return <Circle className="h-5 w-5" />;
+    case 'image':
+      if (layer.get('objectType') === 'barcode') {
+        return <Barcode className="h-5 w-5" />;
+      }
+      return <ImageIcon className="h-5 w-5" />;
+    default:
+      return <HelpCircle className="h-5 w-5" />;
+  }
+};
+
 
 export function LeftSidebar() {
   const { toggleSidebar, state } = useSidebar();
@@ -185,6 +206,28 @@ export function LeftSidebar() {
             </AccordionItem>
             </Accordion>
         )}
+         {state === 'collapsed' && (
+            <div className="flex flex-col items-center gap-2 p-2">
+                <TooltipProvider>
+                    {reversedLayers.map((layer) => (
+                        <Tooltip key={layer.id}>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant={activeObject?.id === layer.id ? "secondary" : "ghost"}
+                                    size="icon"
+                                    onClick={() => setActiveObjectById(layer.id!)}
+                                >
+                                    {getIconForLayer(layer)}
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                                <p>{layer.name || `Untitled ${layer.type}`}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    ))}
+                </TooltipProvider>
+            </div>
+         )}
       </SidebarContent>
     </Sidebar>
   );
