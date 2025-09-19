@@ -65,154 +65,152 @@ export function Toolbar() {
   const isObjectSelected = !!activeObject;
 
   return (
-    <TooltipProvider>
-      <div className="bg-background rounded-lg border shadow-sm p-2 flex items-center gap-2 flex-wrap sticky top-0 z-10">
+    <div className="bg-background rounded-lg border shadow-sm p-2 flex items-center gap-2 flex-wrap sticky top-0 z-10">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo}><Undo /></Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          <p>Undo (Ctrl+Z)</p>
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo}><Redo /></Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          <p>Redo (Ctrl+Y)</p>
+        </TooltipContent>
+      </Tooltip>
+      
+      <Separator orientation="vertical" className="h-6" />
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline"><Plus className="mr-2" /> Add Element</Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem onClick={() => addObject('placeholder-text')}>
+            <Type className="mr-2" /> Placeholder Text
+          </DropdownMenuItem>
+           <DropdownMenuItem onClick={() => addObject('static-text')}>
+            <Text className="mr-2" /> Static Text
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => addObject('placeholder-image')}>
+            <ImageIcon className="mr-2" /> Placeholder Image
+          </DropdownMenuItem>
+           <DropdownMenuItem onClick={() => addObject('static-image')}>
+            <ImageIcon className="mr-2" /> Static Image
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => addObject('rect')}>
+            <RectangleHorizontal className="mr-2" /> Rectangle
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => addObject('circle')}>
+            <Circle className="mr-2" /> Circle
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => addObject('barcode')}>
+            <Barcode className="mr-2" /> Barcode
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Separator orientation="vertical" className="h-6" />
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size="icon" onClick={zoomIn}><ZoomIn /></Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          <p>Zoom In</p>
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size="icon" onClick={zoomOut}><ZoomOut /></Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          <p>Zoom Out</p>
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size="icon" onClick={fitToScreen}><Maximize /></Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          <p>Fit to Screen</p>
+        </TooltipContent>
+      </Tooltip>
+
+      <Separator orientation="vertical" className="h-6" />
+
+      <div className="flex items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo}><Undo /></Button>
+            <Button variant="ghost" size="icon" onClick={alignLeft} disabled={!isObjectSelected}><AlignLeft /></Button>
           </TooltipTrigger>
-          <TooltipContent>
-            <p>Undo (Ctrl+Z)</p>
+          <TooltipContent side="bottom">
+            <p>Align Left</p>
           </TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo}><Redo /></Button>
+            <Button variant="ghost" size="icon" onClick={alignCenterHorizontal} disabled={!isObjectSelected}><AlignCenterHorizontal /></Button>
           </TooltipTrigger>
-          <TooltipContent>
-            <p>Redo (Ctrl+Y)</p>
-          </TooltipContent>
-        </Tooltip>
-        
-        <Separator orientation="vertical" className="h-6" />
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline"><Plus className="mr-2" /> Add Element</Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => addObject('placeholder-text')}>
-              <Type className="mr-2" /> Placeholder Text
-            </DropdownMenuItem>
-             <DropdownMenuItem onClick={() => addObject('static-text')}>
-              <Text className="mr-2" /> Static Text
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addObject('placeholder-image')}>
-              <ImageIcon className="mr-2" /> Placeholder Image
-            </DropdownMenuItem>
-             <DropdownMenuItem onClick={() => addObject('static-image')}>
-              <ImageIcon className="mr-2" /> Static Image
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => addObject('rect')}>
-              <RectangleHorizontal className="mr-2" /> Rectangle
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addObject('circle')}>
-              <Circle className="mr-2" /> Circle
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addObject('barcode')}>
-              <Barcode className="mr-2" /> Barcode
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <Separator orientation="vertical" className="h-6" />
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={zoomIn}><ZoomIn /></Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Zoom In</p>
+          <TooltipContent side="bottom">
+            <p>Align Center Horizontally</p>
           </TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={zoomOut}><ZoomOut /></Button>
+            <Button variant="ghost" size="icon" onClick={alignRight} disabled={!isObjectSelected}><AlignRight /></Button>
           </TooltipTrigger>
-          <TooltipContent>
-            <p>Zoom Out</p>
+          <TooltipContent side="bottom">
+            <p>Align Right</p>
           </TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={fitToScreen}><Maximize /></Button>
+            <Button variant="ghost" size="icon" onClick={alignTop} disabled={!isObjectSelected}><AlignStartVertical /></Button>
           </TooltipTrigger>
-          <TooltipContent>
-            <p>Fit to Screen</p>
+          <TooltipContent side="bottom">
+            <p>Align Top</p>
           </TooltipContent>
         </Tooltip>
-
-        <Separator orientation="vertical" className="h-6" />
-
-        <div className="flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={alignLeft} disabled={!isObjectSelected}><AlignLeft /></Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Align Left</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={alignCenterHorizontal} disabled={!isObjectSelected}><AlignCenterHorizontal /></Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Align Center Horizontally</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={alignRight} disabled={!isObjectSelected}><AlignRight /></Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Align Right</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={alignTop} disabled={!isObjectSelected}><AlignStartVertical /></Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Align Top</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={alignCenterVertical} disabled={!isObjectSelected}><AlignVerticalJustifyCenter /></Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Align Center Vertically</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={alignBottom} disabled={!isObjectSelected}><AlignEndVertical /></Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Align Bottom</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={bringToFront} disabled={!isObjectSelected}><BringToFront /></Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Bring to Front</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={sendToBack} disabled={!isObjectSelected}><SendToBack /></Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Send to Back</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={alignCenterVertical} disabled={!isObjectSelected}><AlignVerticalJustifyCenter /></Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Align Center Vertically</p>
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={alignBottom} disabled={!isObjectSelected}><AlignEndVertical /></Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Align Bottom</p>
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={bringToFront} disabled={!isObjectSelected}><BringToFront /></Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Bring to Front</p>
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={sendToBack} disabled={!isObjectSelected}><SendToBack /></Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Send to Back</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
-    </TooltipProvider>
+
+    </div>
   );
 }
