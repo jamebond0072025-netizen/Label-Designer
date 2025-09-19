@@ -16,8 +16,9 @@ interface ImagePropertiesProps {
 export function ImageProperties({ object, updateObject, updateObjectInRealTime }: ImagePropertiesProps) {
   
   const getBorderRadiusPercentage = (obj: fabric.Image) => {
+    if (!obj.width || !obj.height) return 0;
     const borderRadius = obj.get('borderRadius') || 0;
-    const maxRadius = Math.min(obj.width!, obj.height!) / 2;
+    const maxRadius = Math.min(obj.width, obj.height) / 2;
     return maxRadius > 0 ? (borderRadius / maxRadius) * 100 : 0;
   };
 
@@ -47,7 +48,7 @@ export function ImageProperties({ object, updateObject, updateObjectInRealTime }
   
   const handleOpacityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
-    const newOpacity = isNaN(value) ? 0 : Math.max(0, Math.min(100, value));
+    const newOpacity = isNaN(value) ? 100 : Math.max(0, Math.min(100, value));
     setOpacity(newOpacity);
     updateObjectInRealTime(object.id!, { opacity: newOpacity / 100 });
   };
@@ -57,7 +58,8 @@ export function ImageProperties({ object, updateObject, updateObjectInRealTime }
     const newRadiusPercent = isNaN(value) ? 0 : Math.max(0, Math.min(100, value));
     setBorderRadius(newRadiusPercent);
 
-    const maxRadius = Math.min(object.width!, object.height!) / 2;
+    if (!object.width || !object.height) return;
+    const maxRadius = Math.min(object.width, object.height) / 2;
     const pixelValue = (newRadiusPercent / 100) * maxRadius;
     updateObjectInRealTime(object.id!, { borderRadius: pixelValue });
   }
@@ -97,7 +99,8 @@ export function ImageProperties({ object, updateObject, updateObjectInRealTime }
               value={borderRadius}
               onChange={handleBorderRadiusChange}
               onBlur={() => {
-                  const maxRadius = Math.min(object.width!, object.height!) / 2;
+                  if (!object.width || !object.height) return;
+                  const maxRadius = Math.min(object.width, object.height) / 2;
                   const pixelValue = (borderRadius / 100) * maxRadius;
                   handlePropertyChange('borderRadius', pixelValue);
               }}
@@ -111,7 +114,7 @@ export function ImageProperties({ object, updateObject, updateObjectInRealTime }
           <Input 
               id="image-stroke"
               type="color"
-              value={object.stroke || '#000000'}
+              value={object.stroke || ''}
               onChange={(e) => handlePropertyChange('stroke', e.target.value)}
               className="p-1"
           />

@@ -153,7 +153,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const canvasInstance = new fabric.Canvas(el, {
       width: 800,
       height: 600,
-      backgroundColor: '#fff',
+      backgroundColor: '#ffffff',
       selection: true,
       defaultCursor: 'default',
       // Panning state
@@ -283,7 +283,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       case 'placeholder-image':
         const imageKey = getUniqueKey('image');
         fabric.Image.fromURL('https://placehold.co/400x300/EFEFEF/AAAAAA?text=Placeholder', (img) => {
-            img.set({ ...commonProps, name: imageKey, left: 50, top: 50, isPlaceholder: true });
+            img.set({ ...commonProps, name: imageKey, left: 50, top: 50, isPlaceholder: true, stroke: '#000000', strokeWidth: 1 });
             img.scaleToWidth(200);
             canvas.add(img);
             canvas.setActiveObject(img);
@@ -292,7 +292,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         return;
        case 'static-image':
         fabric.Image.fromURL('https://placehold.co/400x300/EFEFEF/AAAAAA?text=Static+Image', (img) => {
-            img.set({ ...commonProps, name: 'Static Image', left: 50, top: 50, isPlaceholder: false });
+            img.set({ ...commonProps, name: 'Static Image', left: 50, top: 50, isPlaceholder: false, stroke: '#000000', strokeWidth: 1 });
             img.scaleToWidth(200);
             canvas.add(img);
             canvas.setActiveObject(img);
@@ -830,5 +830,3 @@ export const useEditor = () => {
   }
   return context;
 };
-
-    
