@@ -475,7 +475,14 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   const handleSave = useCallback((templateName: string) => {
     if (!canvas) return;
-    const json = JSON.stringify(canvas.toJSON(CUSTOM_PROPS));
+    const canvasJson = canvas.toJSON(CUSTOM_PROPS);
+    const data = {
+        canvas: canvasJson,
+        width: canvas.getWidth(),
+        height: canvas.getHeight(),
+        backgroundColor: canvas.backgroundColor,
+    }
+    const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -503,9 +510,15 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       if (!file) return;
       const reader = new FileReader();
       reader.onload = (event) => {
-        const json = event.target?.result as string;
+        const jsonString = event.target?.result as string;
+        const data = JSON.parse(jsonString);
+
         isRecordingHistory.current = false;
-        canvas.loadFromJSON(json, () => {
+        
+        canvas.setDimensions({ width: data.width, height: data.height });
+        canvas.backgroundColor = data.backgroundColor;
+        
+        canvas.loadFromJSON(data.canvas, () => {
           canvas.renderAll();
           updateCanvasObjects(canvas);
           canvas.getObjects().forEach(obj => {
