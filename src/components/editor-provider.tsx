@@ -141,6 +141,34 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     updateJsonData(canvasInstance);
   }, []);
 
+  const fitToScreen = useCallback(() => {
+    if (!canvas || !fabric || !containerRef.current) return;
+
+    const container = containerRef.current;
+    const containerWidth = container.clientWidth - 32;
+    const containerHeight = container.clientHeight - 32;
+    const canvasWidth = canvas.getWidth();
+    const canvasHeight = canvas.getHeight();
+
+    if (canvasWidth === 0 || canvasHeight === 0) return;
+
+    const scaleX = containerWidth / canvasWidth;
+    const scaleY = containerHeight / canvasHeight;
+    const newZoom = Math.min(scaleX, scaleY);
+
+    setZoom(newZoom);
+    canvas.setZoom(newZoom);
+
+    const vpt = canvas.viewportTransform;
+    if (vpt) {
+        vpt[4] = (container.clientWidth - canvasWidth * newZoom) / 2;
+        vpt[5] = (container.clientHeight - canvasHeight * newZoom) / 2;
+        canvas.setViewportTransform(vpt);
+    }
+
+    canvas.renderAll();
+  }, [canvas, fabric]);
+
   const initCanvas = useCallback((el: HTMLCanvasElement, container: HTMLDivElement) => {
     if (!fabric) return;
     
@@ -490,6 +518,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
           });
           isRecordingHistory.current = true;
           saveHistory(canvas);
+          fitToScreen();
           toast({ title: "Template Loaded!" });
         }, (o: any, object: FabricType.Object) => {
             if (object.type === 'image' && o.borderRadius > 0) {
@@ -508,7 +537,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       reader.readAsText(file);
     };
     input.click();
-  }, [canvas, fabric, toast, updateObject, updateCanvasObjects, saveHistory]);
+  }, [canvas, fabric, toast, updateObject, updateCanvasObjects, saveHistory, fitToScreen]);
   
   const loadFromHistory = useCallback((entry: CanvasHistory) => {
     if (!canvas) return;
@@ -660,34 +689,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     canvas.renderAll();
   };
   
-  const fitToScreen = useCallback(() => {
-    if (!canvas || !fabric || !containerRef.current) return;
-
-    const container = containerRef.current;
-    const containerWidth = container.clientWidth - 32;
-    const containerHeight = container.clientHeight - 32;
-    const canvasWidth = canvas.getWidth();
-    const canvasHeight = canvas.getHeight();
-
-    if (canvasWidth === 0 || canvasHeight === 0) return;
-
-    const scaleX = containerWidth / canvasWidth;
-    const scaleY = containerHeight / canvasHeight;
-    const newZoom = Math.min(scaleX, scaleY);
-
-    setZoom(newZoom);
-    canvas.setZoom(newZoom);
-
-    const vpt = canvas.viewportTransform;
-    if (vpt) {
-        vpt[4] = (container.clientWidth - canvasWidth * newZoom) / 2;
-        vpt[5] = (container.clientHeight - canvasHeight * newZoom) / 2;
-        canvas.setViewportTransform(vpt);
-    }
-
-    canvas.renderAll();
-  }, [canvas, fabric]);
-
   const setCanvasSize = useCallback((width: number, height: number) => {
     if (canvas) {
       canvas.setDimensions({ width, height });
@@ -830,3 +831,5 @@ export const useEditor = () => {
   }
   return context;
 };
+
+    

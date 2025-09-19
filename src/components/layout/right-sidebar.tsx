@@ -30,7 +30,7 @@ import {
 import { PanelRight, ImageUp } from 'lucide-react';
 import { useEditor } from '../editor-provider';
 import { predefinedSizes } from '@/lib/predefined-sizes';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 const DPI = 96;
 const MM_TO_IN = 0.0393701;
@@ -55,18 +55,40 @@ export function RightSidebar() {
 
   useEffect(() => {
     if (canvas) {
-        const pxWidth = canvas.getWidth();
-        const pxHeight = canvas.getHeight();
-        if (unit === 'in') {
-            setCustomWidth(pxWidth / DPI);
-            setCustomHeight(pxHeight / DPI);
-        } else if (unit === 'mm') {
-            setCustomWidth((pxWidth / DPI) / MM_TO_IN);
-            setCustomHeight((pxHeight / DPI) / MM_TO_IN);
-        } else {
-            setCustomWidth(pxWidth);
-            setCustomHeight(pxHeight);
+        const updateDimensions = () => {
+            const pxWidth = canvas.getWidth();
+            const pxHeight = canvas.getHeight();
+            if (unit === 'in') {
+                setCustomWidth(pxWidth / DPI);
+                setCustomHeight(pxHeight / DPI);
+            } else if (unit === 'mm') {
+                setCustomWidth((pxWidth / DPI) / MM_TO_IN);
+                setCustomHeight((pxHeight / DPI) / MM_TO_IN);
+            } else {
+                setCustomWidth(pxWidth);
+                setCustomHeight(pxHeight);
+            }
         }
+        updateDimensions();
+
+        // Listen for canvas dimension changes from any source (e.g. loadFromJson)
+        const observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (mutation.attributeName === 'width' || mutation.attributeName === 'height') {
+                    updateDimensions();
+                    break;
+                }
+            }
+        });
+        
+        const canvasContainer = canvas.getElement().parentElement;
+        if (canvasContainer) {
+            observer.observe(canvasContainer, { attributes: true });
+        }
+
+        return () => {
+            observer.disconnect();
+        };
     }
   }, [canvas, unit]);
 
