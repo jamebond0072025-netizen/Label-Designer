@@ -1,7 +1,7 @@
 
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react';
 import type { fabric as FabricType } from 'fabric';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -14,8 +14,7 @@ interface PrintSettings {
   marginLeft: number;
   gapHorizontal: number;
   gapVertical: number;
-  labelWidth: number;
-  labelHeight: number;
+  scale: number;
 }
 
 interface PrintPreviewContextType {
@@ -27,6 +26,8 @@ interface PrintPreviewContextType {
   exportAsPdf: () => void;
   isLoading: boolean;
   jsonData: Record<string, string>[];
+  showRealData: boolean;
+  setShowRealData: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const PrintPreviewContext = createContext<PrintPreviewContextType | undefined>(undefined);
@@ -60,14 +61,21 @@ const MOCK_JSON_DATA = [
     { "text-1": "Seventh Item", "barcode-1": "556677889900", "image-1": "https://picsum.photos/seed/7/400/300" },
     { "text-1": "Eighth Item", "barcode-1": "121212121212", "image-1": "https://picsum.photos/seed/8/400/300" },
     { "text-1": "Ninth Item", "barcode-1": "343434343434", "image-1": "https://picsum.photos/seed/9/400/300" },
-    { "text-1": "Tenth Item", "barcode-1": "565656565656", "image-1": "https://picsum.photos/seed/10/400/300" }
+    { "text-1": "Tenth Item", "barcode-1": "565656565656", "image-1": "https://picsum.photos/seed/10/400/300" },
+    { "text-1": "Eleventh Item", "barcode-1": "123456789012", "image-1": "https://picsum.photos/seed/11/400/300" },
+    { "text-1": "Twelfth Item", "barcode-1": "987654321098", "image-1": "https://picsum.photos/seed/12/400/300" },
+    { "text-1": "Thirteenth Item", "barcode-1": "112233445566", "image-1": "https://picsum.photos/seed/13/400/300" },
+    { "text-1": "Fourteenth Item", "barcode-1": "778899001122", "image-1": "https://picsum.photos/seed/14/400/300" },
+    { "text-1": "Fifteenth Item", "barcode-1": "334455667788", "image-1": "https://picsum.photos/seed/15/400/300" }
 ];
 
 export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
   const [canvas, setCanvas] = useState<FabricType.Canvas | null>(null);
   const [fabric, setFabric] = useState<typeof FabricType.fabric | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
   const { toast } = useToast();
+  const [showRealData, setShowRealData] = useState(false);
 
   const [settings, setSettings] = useState<PrintSettings>({
     pageSize: 'A4',
@@ -75,8 +83,7 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     marginLeft: 20,
     gapHorizontal: 10,
     gapVertical: 10,
-    labelWidth: MOCK_TEMPLATE_JSON.width,
-    labelHeight: MOCK_TEMPLATE_JSON.height,
+    scale: 1,
   });
 
   useEffect(() => {
@@ -88,8 +95,7 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const initCanvas = useCallback((el: HTMLCanvasElement, container: HTMLDivElement) => {
-    if (!fabric) return;
-    if (canvas) canvas.dispose();
+    if (!fabric || isCanvasInitialized) return;
 
     const pageSize = predefinedSizes.find(s => s.name.startsWith(settings.pageSize));
     const width = pageSize ? pageSize.width : 794;
@@ -99,15 +105,18 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
       width, height, backgroundColor: '#ffffff', selection: false,
     });
     setCanvas(canvasInstance);
-    return () => canvasInstance.dispose();
-  }, [fabric, settings.pageSize, canvas]);
+    setIsCanvasInitialized(true);
+    
+    return () => {
+        canvasInstance.dispose();
+        setIsCanvasInitialized(false);
+    }
+  }, [fabric, settings.pageSize, isCanvasInitialized]);
 
   const createLabelAsImage = useCallback(async (
     fabricInstance: typeof FabricType.fabric,
     templateJson: any,
-    record: Record<string, string>,
-    targetWidth: number,
-    targetHeight: number
+    record: Record<string, string>
   ): Promise<FabricType.Image> => {
     
     const labelCanvas = new fabricInstance.StaticCanvas(null, {
@@ -115,7 +124,9 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
       height: templateJson.height,
     });
 
-    await new Promise<void>((resolve) => labelCanvas.loadFromJSON({ objects: templateJson.objects }, () => resolve()));
+    const clonedObjects = JSON.parse(JSON.stringify(templateJson.objects));
+
+    await new Promise<void>((resolve) => labelCanvas.loadFromJSON({ objects: clonedObjects }, () => resolve()));
 
     const updatePromises: Promise<any>[] = [];
     for (const obj of labelCanvas.getObjects()) {
@@ -139,21 +150,12 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     await Promise.all(updatePromises);
     labelCanvas.renderAll();
 
-    // Create a container canvas of the target size
-    const containerCanvas = new fabricInstance.StaticCanvas(null, {
-        width: targetWidth,
-        height: targetHeight,
-        backgroundColor: 'transparent',
-    });
-
     const dataURL = labelCanvas.toDataURL({
         format: 'png',
-        width: targetWidth,
-        height: targetHeight,
+        multiplier: 2, // Increase resolution for better quality
     });
     
     labelCanvas.dispose();
-    containerCanvas.dispose();
 
     return new Promise<FabricType.Image>((resolve) => {
       fabricInstance.Image.fromURL(dataURL, (img) => {
@@ -168,57 +170,81 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     canvas.clear();
 
     const templateJson = MOCK_TEMPLATE_JSON;
+    const data = MOCK_JSON_DATA;
+
+    const scaledWidth = templateJson.width * settings.scale;
+    const scaledHeight = templateJson.height * settings.scale;
     
-    const sampleRecord: Record<string, string> = {};
-    templateJson.objects.forEach((obj: any) => {
-        if (obj.isPlaceholder && obj.name) {
-             sampleRecord[obj.name] = obj.name;
-        }
-    });
-
-    const singleLabelImage = await createLabelAsImage(fabric, templateJson, sampleRecord, settings.labelWidth, settings.labelHeight);
-
     let currentX = settings.marginLeft;
     let currentY = settings.marginTop;
 
-    const labelsPerPage = { x: 0, y: 0 };
-    if (settings.labelWidth > 0) {
-        labelsPerPage.x = Math.floor((canvas.width! - settings.marginLeft) / (settings.labelWidth + settings.gapHorizontal));
+    const labelsToRender = showRealData ? data.length : 50; // Show up to 50 placeholders
+    let renderedCount = 0;
+
+    const placeholderRect = new fabric.Rect({
+        width: scaledWidth,
+        height: scaledHeight,
+        fill: '#f0f0f0',
+        stroke: '#cccccc',
+        strokeDashArray: [5, 5],
+        selectable: false,
+        evented: false,
+    });
+
+    let masterLabelImage: FabricType.Image | null = null;
+    if (showRealData && data.length > 0) {
+        // Only create the first image to avoid re-creating it if not needed
+    } else {
+        // For template view, we don't need a master image, we use the placeholderRect
     }
-    if (settings.labelHeight > 0) {
-        labelsPerPage.y = Math.floor((canvas.height! - settings.marginTop) / (settings.labelHeight + settings.gapVertical));
-    }
-    
-    for (let row = 0; row < labelsPerPage.y; row++) {
-        currentX = settings.marginLeft;
-        for (let col = 0; col < labelsPerPage.x; col++) {
-             await new Promise<void>(resolve => {
-                singleLabelImage.clone((clonedImg: FabricType.Image) => {
-                    clonedImg.set({ left: currentX, top: currentY, selectable: false, evented: false });
-                    canvas.add(clonedImg);
-                    resolve();
-                });
-            });
-            currentX += settings.labelWidth + settings.gapHorizontal;
+
+
+    for (let i = 0; i < labelsToRender; i++) {
+        if (currentY + scaledHeight > canvas.getHeight()) {
+            break; 
         }
-        currentY += settings.labelHeight + settings.gapVertical;
+
+        if (showRealData) {
+            const record = data[i];
+            if (!record) continue;
+            
+            const labelImage = await createLabelAsImage(fabric, templateJson, record);
+            labelImage.scaleToWidth(scaledWidth);
+            labelImage.set({ left: currentX, top: currentY, selectable: false, evented: false });
+            canvas.add(labelImage);
+
+        } else {
+            // Use placeholder for template view
+            const placeholderClone = await new Promise<FabricType.Rect>(resolve => placeholderRect.clone(resolve));
+            placeholderClone.set({ left: currentX, top: currentY });
+            canvas.add(placeholderClone);
+        }
+
+        currentX += scaledWidth + settings.gapHorizontal;
+
+        if (currentX + scaledWidth > canvas.getWidth()) {
+            currentX = settings.marginLeft;
+            currentY += scaledHeight + settings.gapVertical;
+        }
+        renderedCount++;
     }
     
     canvas.renderAll();
     setIsLoading(false);
-  }, [canvas, fabric, settings, createLabelAsImage]);
+  }, [canvas, fabric, settings, showRealData, createLabelAsImage]);
+
 
   useEffect(() => {
-    if (canvas && fabric) {
-      const pageSize = predefinedSizes.find(s => s.name.startsWith(settings.pageSize));
-      const width = pageSize ? pageSize.width : 794;
-      const height = pageSize ? pageSize.height : 1122;
-      if (canvas.getWidth() !== width || canvas.getHeight() !== height) {
-        canvas.setDimensions({ width, height });
-      }
-      renderLabels();
+    if (isCanvasInitialized && fabric && canvas) {
+        const pageSize = predefinedSizes.find(s => s.name.startsWith(settings.pageSize));
+        const width = pageSize ? pageSize.width : 794;
+        const height = pageSize ? pageSize.height : 1122;
+        if (canvas.getWidth() !== width || canvas.getHeight() !== height) {
+            canvas.setDimensions({ width, height });
+        }
+        renderLabels();
     }
-  }, [settings, canvas, fabric, renderLabels]);
+  }, [settings, showRealData, isCanvasInitialized, fabric, canvas, renderLabels]);
 
 
   const exportAsPdf = async () => {
@@ -235,13 +261,11 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
       unit: 'px',
       format: [pageW, pageH]
     });
-    pdf.deletePage(1);
+    pdf.deletePage(1); // Remove default blank page
 
     let dataToProcess = [...MOCK_JSON_DATA];
-    let pageNumber = 0;
 
     while(dataToProcess.length > 0) {
-        pageNumber++;
         pdf.addPage([pageW, pageH], pageW > pageH ? 'l' : 'p');
 
         const pageCanvas = new fabric.StaticCanvas(null, {
@@ -254,23 +278,33 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
         let currentY = settings.marginTop;
         let canFitMoreOnPage = true;
 
+        const scaledWidth = MOCK_TEMPLATE_JSON.width * settings.scale;
+        const scaledHeight = MOCK_TEMPLATE_JSON.height * settings.scale;
+
         while(canFitMoreOnPage && dataToProcess.length > 0) {
             const record = dataToProcess.shift();
             if (!record) continue;
 
-            const labelImage = await createLabelAsImage(fabric, MOCK_TEMPLATE_JSON, record, settings.labelWidth, settings.labelHeight);
+            const labelImage = await createLabelAsImage(fabric, MOCK_TEMPLATE_JSON, record);
+            labelImage.scaleToWidth(scaledWidth);
             labelImage.set({ left: currentX, top: currentY });
             pageCanvas.add(labelImage);
 
-            currentX += settings.labelWidth + settings.gapHorizontal;
-            if (currentX + settings.labelWidth > pageW) {
+            currentX += scaledWidth + settings.gapHorizontal;
+            if (currentX + scaledWidth > pageW - settings.marginLeft) { // Check against right margin
                 currentX = settings.marginLeft;
-                currentY += settings.labelHeight + settings.gapVertical;
-                if (currentY + settings.labelHeight > pageH) {
+                currentY += scaledHeight + settings.gapVertical;
+                if (currentY + scaledHeight > pageH - settings.marginTop) { // Check against bottom margin
                     canFitMoreOnPage = false;
                 }
             }
         }
+        
+        // Wait for all images to be added and rendered
+        await new Promise<void>(resolve => {
+            pageCanvas.renderAll();
+            setTimeout(resolve, 100); // Small delay to ensure rendering completes
+        });
         
         const dataUrl = pageCanvas.toDataURL({ format: 'png', quality: 1, multiplier: 2 });
         pdf.addImage(dataUrl, 'PNG', 0, 0, pageW, pageH);
@@ -291,6 +325,8 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     exportAsPdf,
     isLoading,
     jsonData: MOCK_JSON_DATA,
+    showRealData,
+    setShowRealData,
   };
 
   return (
