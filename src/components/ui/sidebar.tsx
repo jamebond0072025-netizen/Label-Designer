@@ -30,6 +30,9 @@ const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 type SidebarContext = {
   id: string
   state: "expanded" | "collapsed"
+  isPinned: boolean
+  isHovered: boolean
+  setIsHovered: (hovered: boolean) => void
   open: boolean
   setOpen: (open: boolean) => void
   openMobile: boolean
@@ -73,35 +76,33 @@ const SidebarProvider = React.forwardRef<
   ) => {
     const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
+    const [isHovered, setIsHovered] = React.useState(false);
     const cookieName = `${SIDEBAR_COOKIE_NAME}_${id}`
 
-    // This is the internal state of the sidebar.
-    // We use openProp and setOpenProp for control from outside the component.
     const [_open, _setOpen] = React.useState(defaultOpen)
-    const open = openProp ?? _open
-    const setOpen = React.useCallback(
+    const isPinned = openProp ?? _open
+    
+    const setPinned = React.useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
-        const openState = typeof value === "function" ? value(open) : value
+        const openState = typeof value === "function" ? value(isPinned) : value
         if (setOpenProp) {
           setOpenProp(openState)
         } else {
           _setOpen(openState)
         }
-
-        // This sets the cookie to keep the sidebar state.
         document.cookie = `${cookieName}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
       },
-      [setOpenProp, open, cookieName]
+      [setOpenProp, isPinned, cookieName]
     )
 
-    // Helper to toggle the sidebar.
+    const open = isPinned || isHovered;
+
     const toggleSidebar = React.useCallback(() => {
       return isMobile
         ? setOpenMobile((open) => !open)
-        : setOpen((open) => !open)
-    }, [isMobile, setOpen, setOpenMobile])
+        : setPinned((pinned) => !pinned)
+    }, [isMobile, setPinned, setOpenMobile])
 
-    // Adds a keyboard shortcut to toggle the sidebar.
     React.useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
         if (
@@ -117,22 +118,23 @@ const SidebarProvider = React.forwardRef<
       return () => window.removeEventListener("keydown", handleKeyDown)
     }, [toggleSidebar])
 
-    // We add a state so that we can do data-state="expanded" or "collapsed".
-    // This makes it easier to style the sidebar with Tailwind classes.
     const state = open ? "expanded" : "collapsed"
 
     const contextValue = React.useMemo<SidebarContext>(
       () => ({
         id,
         state,
+        isPinned,
+        isHovered,
+        setIsHovered,
         open,
-        setOpen,
+        setOpen: setPinned,
         isMobile,
         openMobile,
         setOpenMobile,
         toggleSidebar,
       }),
-      [id, state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+      [id, state, isPinned, isHovered, setIsHovered, open, setPinned, isMobile, openMobile, setOpenMobile, toggleSidebar]
     )
 
     return (
@@ -177,7 +179,7 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+    const { isMobile, state, openMobile, setOpenMobile, setIsHovered } = useSidebar()
 
     if (isMobile) {
       return (
@@ -204,6 +206,8 @@ const Sidebar = React.forwardRef<
         ref={ref}
         data-state={state}
         data-side={side}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         className={cn(
           "hidden md:flex flex-col h-full bg-card text-card-foreground border-border transition-[width] duration-300 ease-in-out",
           state === 'expanded' ? "w-[--sidebar-width]" : "w-[--sidebar-width-icon]",
