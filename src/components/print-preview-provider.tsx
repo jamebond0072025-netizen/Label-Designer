@@ -67,7 +67,7 @@ const MOCK_TEMPLATE_JSON = {
             "id": "a9b3c1d4",
             "name": "barcode-1",
             "objectType": "barcode",
-            "barcodeValue": "1234567890",
+            "barcodeValue": "barcode-1",
             "isPlaceholder": true
         },
          {
@@ -81,7 +81,7 @@ const MOCK_TEMPLATE_JSON = {
             "height": 112.5,
             "scaleX": 0.75,
             "scaleY": 0.75,
-            "src": "https://placehold.co/400x300/EFEFEF/AAAAAA?text=Placeholder",
+            "src": "https://placehold.co/400x300/EFEFEF/AAAAAA?text=image-1",
             "crossOrigin": "anonymous",
             "id": "c5d8e2f1",
             "name": "image-1",
@@ -91,21 +91,6 @@ const MOCK_TEMPLATE_JSON = {
 };
 const MOCK_LABEL_WIDTH = 400;
 const MOCK_LABEL_HEIGHT = 150;
-
-
-// MOCK: This would typically be fetched based on the jsonId from the URL
-const MOCK_JSON_DATA = [
-  { "text-1": "John Doe", "barcode-1": "123456", "image-1": "https://picsum.photos/seed/1/400/300" },
-  { "text-1": "Jane Smith", "barcode-1": "789012", "image-1": "https://picsum.photos/seed/2/400/300" },
-  { "text-1": "Peter Jones", "barcode-1": "345678", "image-1": "https://picsum.photos/seed/3/400/300" },
-  { "text-1": "Mary Williams", "barcode-1": "901234", "image-1": "https://picsum.photos/seed/4/400/300" },
-  { "text-1": "David Brown", "barcode-1": "567890", "image-1": "https://picsum.photos/seed/5/400/300" },
-  { "text-1": "Sarah Taylor", "barcode-1": "112233", "image-1": "https://picsum.photos/seed/6/400/300" },
-  { "text-1": "James Wilson", "barcode-1": "445566", "image-1": "https://picsum.photos/seed/7/400/300" },
-  { "text-1": "Linda Martinez", "barcode-1": "778899", "image-1": "https://picsum.photos/seed/8/400/300" },
-  { "text-1": "Robert Anderson", "barcode-1": "101112", "image-1": "https://picsum.photos/seed/9/400/300" },
-  { "text-1": "Patricia Thomas", "barcode-1": "131415", "image-1": "https://picsum.photos/seed/10/400/300" },
-];
 
 export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
   const [canvas, setCanvas] = useState<FabricType.Canvas | null>(null);
@@ -159,12 +144,26 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     fabricInstance: typeof FabricType.fabric,
     templateJson: any,
     labelWidth: number,
-    labelHeight: number,
-    record: Record<string, string>
+    labelHeight: number
   ): Promise<FabricType.Image> => {
     const labelCanvas = new fabricInstance.StaticCanvas(null, {
       width: labelWidth,
       height: labelHeight,
+    });
+    
+    // Create a sample record from the template keys
+    const sampleRecord: Record<string, string> = {};
+    templateJson.objects.forEach((obj: any) => {
+        if (obj.isPlaceholder && obj.name) {
+            if (obj.objectType === 'barcode') {
+                 sampleRecord[obj.name] = obj.barcodeValue || obj.name;
+            } else if (obj.type === 'image') {
+                 sampleRecord[obj.name] = `https://placehold.co/400x300/EFEFEF/AAAAAA?text=${obj.name}`;
+            }
+            else {
+                sampleRecord[obj.name] = obj.name;
+            }
+        }
     });
 
     const loadCanvasPromise = new Promise<void>((resolve) => {
@@ -175,8 +174,8 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     const updatePromises: Promise<any>[] = [];
 
     for (const obj of labelCanvas.getObjects()) {
-      if (obj.get('isPlaceholder') && obj.name && record[obj.name]) {
-        const value = record[obj.name];
+      if (obj.get('isPlaceholder') && obj.name && sampleRecord[obj.name]) {
+        const value = sampleRecord[obj.name];
         if (obj.type === 'textbox') {
           (obj as FabricType.Textbox).set('text', value);
         } else if (obj.get('objectType') === 'barcode') {
@@ -218,10 +217,8 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     canvas.clear();
     
-    // In a real app, you would fetch these from a server. Here we use mock data.
     const templateJson = MOCK_TEMPLATE_JSON;
-    const labelData = MOCK_JSON_DATA;
-
+    
     if (!templateJson) {
       toast({ title: 'Error', description: 'No template found.', variant: 'destructive' });
       setIsLoading(false);
@@ -230,30 +227,30 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
     
     const labelWidth = MOCK_LABEL_WIDTH;
     const labelHeight = MOCK_LABEL_HEIGHT;
+    
+    const singleLabelImage = await createLabelAsImage(fabric, templateJson, labelWidth, labelHeight);
 
     let currentX = settings.marginLeft;
     let currentY = settings.marginTop;
 
-    for (const record of labelData) {
-      if (currentY + labelHeight > canvas.height!) {
-        break; // No more space on the page
-      }
-
-      const labelImage = await createLabelAsImage(fabric, templateJson, labelWidth, labelHeight, record);
-      
-      labelImage.set({
-          left: currentX,
-          top: currentY,
-          selectable: false,
-          evented: false,
-      });
-      canvas.add(labelImage);
-      
-      currentX += labelWidth + settings.gapHorizontal;
-      if (currentX + labelWidth > canvas.width!) {
+    while(currentY + labelHeight <= canvas.height!) {
+        while(currentX + labelWidth <= canvas.width!) {
+            const labelClone = await new Promise<FabricType.Image>(resolve => {
+                singleLabelImage.clone((cloned: FabricType.Image) => resolve(cloned));
+            });
+            
+            labelClone.set({
+                left: currentX,
+                top: currentY,
+                selectable: false,
+                evented: false,
+            });
+            canvas.add(labelClone);
+            
+            currentX += labelWidth + settings.gapHorizontal;
+        }
         currentX = settings.marginLeft;
         currentY += labelHeight + settings.gapVertical;
-      }
     }
     
     canvas.renderAll();
@@ -270,7 +267,7 @@ export const PrintPreviewProvider = ({ children }: { children: ReactNode }) => {
         canvas.setDimensions({ width, height });
         renderLabels();
     }
-  }, [settings, canvas, fabric]);
+  }, [settings, canvas, fabric, renderLabels]);
 
 
   const exportAsPdf = () => {
