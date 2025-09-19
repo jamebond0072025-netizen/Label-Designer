@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import type { fabric } from 'fabric';
 import { Separator } from '@/components/ui/separator';
+import { useState, useEffect } from 'react';
 
 interface ImagePropertiesProps {
   object: fabric.Image;
@@ -14,6 +15,20 @@ interface ImagePropertiesProps {
 
 export function ImageProperties({ object, updateObject, updateObjectInRealTime }: ImagePropertiesProps) {
   
+  const getBorderRadiusPercentage = (obj: fabric.Image) => {
+    const borderRadius = obj.get('borderRadius') || 0;
+    const maxRadius = Math.min(obj.width!, obj.height!) / 2;
+    return maxRadius > 0 ? (borderRadius / maxRadius) * 100 : 0;
+  };
+
+  const [opacity, setOpacity] = useState(Math.round((object.opacity ?? 1) * 100));
+  const [borderRadius, setBorderRadius] = useState(Math.round(getBorderRadiusPercentage(object)));
+
+  useEffect(() => {
+    setOpacity(Math.round((object.opacity ?? 1) * 100));
+    setBorderRadius(Math.round(getBorderRadiusPercentage(object)));
+  }, [object]);
+
   const handleUrlChange = (newUrl: string) => {
     if (object.id) {
         object.setSrc(newUrl, () => {
@@ -30,26 +45,21 @@ export function ImageProperties({ object, updateObject, updateObjectInRealTime }
     }
   };
   
-  const handlePropertyChangeInRealTime = (prop: string, value: any) => {
-    if (object.id) {
-      updateObjectInRealTime(object.id, { [prop]: value });
-    }
+  const handleOpacityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    const newOpacity = isNaN(value) ? 0 : Math.max(0, Math.min(100, value));
+    setOpacity(newOpacity);
+    updateObjectInRealTime(object.id!, { opacity: newOpacity / 100 });
   };
+  
+  const handleBorderRadiusChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    const newRadiusPercent = isNaN(value) ? 0 : Math.max(0, Math.min(100, value));
+    setBorderRadius(newRadiusPercent);
 
-  const borderRadius = object.get('borderRadius') || 0;
-  const maxRadius = Math.min(object.width!, object.height!) / 2;
-  const borderRadiusPercentage = maxRadius > 0 ? (borderRadius / maxRadius) * 100 : 0;
-
-  const handleBorderRadiusChange = (percent: number, isFinal: boolean) => {
-    const clampedPercent = Math.max(0, Math.min(100, isNaN(percent) ? 0 : percent));
-    const pixelValue = (clampedPercent / 100) * maxRadius;
-    if (object.id) {
-        if (isFinal) {
-            updateObject(object.id, { borderRadius: pixelValue });
-        } else {
-            updateObjectInRealTime(object.id, { borderRadius: pixelValue });
-        }
-    }
+    const maxRadius = Math.min(object.width!, object.height!) / 2;
+    const pixelValue = (newRadiusPercent / 100) * maxRadius;
+    updateObjectInRealTime(object.id!, { borderRadius: pixelValue });
   }
 
   return (
@@ -73,9 +83,9 @@ export function ImageProperties({ object, updateObject, updateObjectInRealTime }
               id="image-opacity"
               type="number"
               min={0} max={100}
-              value={Math.round((object.opacity ?? 1) * 100)}
-              onChange={(e) => handlePropertyChangeInRealTime('opacity', parseInt(e.target.value, 10) / 100)}
-              onBlur={(e) => handlePropertyChange('opacity', parseInt(e.target.value, 10) / 100)}
+              value={opacity}
+              onChange={handleOpacityChange}
+              onBlur={() => handlePropertyChange('opacity', opacity / 100)}
           />
         </div>
         <div>
@@ -84,9 +94,13 @@ export function ImageProperties({ object, updateObject, updateObjectInRealTime }
               id="image-border-radius"
               type="number"
               min={0} max={100}
-              value={Math.round(borderRadiusPercentage)}
-              onChange={(e) => handleBorderRadiusChange(parseInt(e.target.value, 10), false)}
-              onBlur={(e) => handleBorderRadiusChange(parseInt(e.target.value, 10), true)}
+              value={borderRadius}
+              onChange={handleBorderRadiusChange}
+              onBlur={() => {
+                  const maxRadius = Math.min(object.width!, object.height!) / 2;
+                  const pixelValue = (borderRadius / 100) * maxRadius;
+                  handlePropertyChange('borderRadius', pixelValue);
+              }}
           />
         </div>
       </div>
