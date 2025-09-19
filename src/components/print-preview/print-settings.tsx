@@ -22,9 +22,9 @@ export function PrintSettings() {
   };
 
   return (
-    <aside className="w-80 border-r bg-background p-4 flex flex-col gap-6">
+    <aside className="w-80 border-l bg-background p-4 flex flex-col gap-6 overflow-y-auto">
       <h2 className="text-lg font-semibold">Print Settings</h2>
-      {isLoading && <p className="text-sm text-muted-foreground">Loading labels...</p>}
+      {isLoading && <p className="text-sm text-muted-foreground">Rendering preview...</p>}
       <div className="space-y-4" style={{ opacity: isLoading ? 0.5 : 1, pointerEvents: isLoading ? 'none' : 'auto' }}>
         <div>
           <Label htmlFor="page-size">Page Size</Label>
@@ -45,23 +45,25 @@ export function PrintSettings() {
           </Select>
         </div>
         <Separator />
-        <div>
-          <Label htmlFor="label-width">Label Width (px)</Label>
-          <Input
-            id="label-width"
-            type="number"
-            value={settings.labelWidth}
-            onChange={(e) => handleSettingChange('labelWidth', e.target.value)}
-          />
-        </div>
-        <div>
-          <Label htmlFor="label-height">Label Height (px)</Label>
-          <Input
-            id="label-height"
-            type="number"
-            value={settings.labelHeight}
-            onChange={(e) => handleSettingChange('labelHeight', e.target.value)}
-          />
+        <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label htmlFor="label-width">Label Width (px)</Label>
+              <Input
+                id="label-width"
+                type="number"
+                value={settings.labelWidth}
+                onChange={(e) => handleSettingChange('labelWidth', e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="label-height">Label Height (px)</Label>
+              <Input
+                id="label-height"
+                type="number"
+                value={settings.labelHeight}
+                onChange={(e) => handleSettingChange('labelHeight', e.target.value)}
+              />
+            </div>
         </div>
         <Separator />
         <div>
