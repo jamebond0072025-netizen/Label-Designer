@@ -423,8 +423,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             
             if(isNameTaken) {
                 toast({ title: "Key already exists", description: "Please use a unique key for each placeholder.", variant: "destructive" });
-                setActiveObject(null);
-                setActiveObject(obj);
+                canvas.setActiveObject(obj);
+                canvas.renderAll();
                 return;
             }
 
@@ -444,11 +444,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             const dataUrl = barcodeCanvas.toDataURL('image/png');
             (obj as FabricType.Image).setSrc(dataUrl, () => {
                 obj.set(properties);
-                canvas.renderAll();
                 saveHistory(canvas);
                 updateCanvasObjects(canvas);
-                setActiveObject(null);
-                setActiveObject(obj);
+                canvas.setActiveObject(obj);
+                canvas.renderAll();
             }, { crossOrigin: 'anonymous' });
          } catch(e) {
             console.error(e);
@@ -456,11 +455,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
          }
       } else {
         applyObjectProperties(obj, properties);
-        canvas.renderAll();
         saveHistory(canvas);
         updateCanvasObjects(canvas);
-        setActiveObject(null); 
-        setActiveObject(obj);
+        canvas.setActiveObject(obj);
+        canvas.renderAll();
       }
     }
   }, [canvas, fabric, toast, updateCanvasObjects, saveHistory, applyObjectProperties]);
